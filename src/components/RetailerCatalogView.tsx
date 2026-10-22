@@ -24,7 +24,6 @@ export const RetailerCatalogView: React.FC<RetailerCatalogViewProps> = ({
   const filteredProducts = products.filter((prod) => {
     const matchesSearch =
       prod.name.toLowerCase().includes(search.toLowerCase()) ||
-      prod.manufacturerName.toLowerCase().includes(search.toLowerCase()) ||
       prod.referenceCode.toLowerCase().includes(search.toLowerCase());
 
     const matchesCategory =
@@ -40,13 +39,13 @@ export const RetailerCatalogView: React.FC<RetailerCatalogViewProps> = ({
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
           <div>
             <div className="text-xs uppercase font-extrabold text-[#ff5500] tracking-wider mb-1">
-              Atacado Direto de Fábrica
+              Polo Calçadista de Nova Serrana · Caixas Fechadas
             </div>
             <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 font-display">
-              Catálogo de Fabricantes em Nova Serrana
+              Catálogo Distribuidora Serrana Spress
             </h1>
             <p className="text-xs sm:text-sm text-slate-600 mt-1">
-              Anunciamos o catálogo dos fabricantes com descrição de grade, tamanhos e preços para lojistas de todo o Brasil.
+              Calçados direto do polo de Nova Serrana com descrição de grade, tamanhos e preços exclusivos para lojistas de todo o Brasil.
             </p>
           </div>
 
@@ -63,7 +62,7 @@ export const RetailerCatalogView: React.FC<RetailerCatalogViewProps> = ({
             <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
             <input
               type="text"
-              placeholder="Buscar por calçado, referência ou fabricante..."
+              placeholder="Buscar por calçado, modelo ou referência..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               className="w-full bg-slate-50 border border-slate-200 pl-10 pr-3 py-2 text-xs rounded-xl text-slate-900 placeholder-slate-400 focus:bg-white focus:outline-none focus:border-[#ff5500]"

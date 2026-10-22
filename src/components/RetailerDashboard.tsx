@@ -142,7 +142,7 @@ export const RetailerDashboard: React.FC<RetailerDashboardProps> = ({
                               </span>
                             )}
                             <span className="text-slate-300">·</span>
-                            <span className="text-[#ff5500] font-bold">{item.manufacturerName}</span>
+                            <span className="text-[#ff5500] font-bold">Distribuidora Serrana Spress</span>
                           </div>
                           <div className="mt-1 flex flex-wrap items-center gap-1.5">
                             {item.sizesDistribution.map((s, sIdx) => (

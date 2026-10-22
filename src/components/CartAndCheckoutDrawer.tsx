@@ -250,7 +250,7 @@ export const CartAndCheckoutDrawer: React.FC<CartAndCheckoutDrawerProps> = ({
                           )}
                           <div>
                             <span className="text-[10px] text-[#ff5500] uppercase font-bold tracking-wider">
-                              {item.product.manufacturerName}
+                              Distribuidora Serrana Spress
                             </span>
                             <h4 className="text-sm font-bold text-slate-900">{item.product.name}</h4>
                             <div className="flex flex-wrap items-center gap-2 mt-0.5">

@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { ProductBox } from '../types';
 import { ShoeIllustration } from './ShoeIllustration';
-import { Package, MapPin, ChevronRight, Layers, Lock, Palette } from 'lucide-react';
+import { Package, MapPin, ChevronRight, Layers, Lock, Palette, ShieldCheck } from 'lucide-react';
 
 interface ProductCardProps {
   product: ProductBox;
@@ -77,17 +77,12 @@ export const ProductCard: React.FC<ProductCardProps> = ({
       {/* Content */}
       <div className="p-5 flex-1 flex flex-col justify-between bg-white">
         <div>
-          {/* Manufacturer Link (NO CONTACTS DISPLAYED) */}
+          {/* Brand/Distributor Indicator (RETAILER ONLY SEES DISTRIBUIDORA SERRANA SPRESS) */}
           <div className="flex items-center justify-between text-xs text-slate-500 mb-1.5">
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                onViewManufacturer(product.manufacturerId);
-              }}
-              className="text-xs text-[#ff5500] hover:underline font-bold flex items-center gap-1 cursor-pointer truncate max-w-[200px]"
-            >
-              <span>{product.manufacturerName}</span>
-            </button>
+            <span className="text-xs text-[#ff5500] font-bold flex items-center gap-1.5 truncate max-w-[220px]">
+              <ShieldCheck className="w-3.5 h-3.5 text-[#ff5500] shrink-0" />
+              <span>Distribuidora Serrana Spress</span>
+            </span>
             <span className="flex items-center gap-1 text-[11px] text-slate-500 shrink-0 font-medium">
               <MapPin className="w-3 h-3 text-slate-400" />
               <span>Nova Serrana - MG</span>

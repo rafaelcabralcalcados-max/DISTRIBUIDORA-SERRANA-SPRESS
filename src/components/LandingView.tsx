@@ -47,7 +47,6 @@ export const LandingView: React.FC<LandingViewProps> = ({
     const matchesSearch =
       !searchQuery.trim() ||
       prod.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      prod.manufacturerName.toLowerCase().includes(searchQuery.toLowerCase()) ||
       prod.referenceCode.toLowerCase().includes(searchQuery.toLowerCase());
 
     return matchesCategory && matchesSearch;
@@ -71,10 +70,10 @@ export const LandingView: React.FC<LandingViewProps> = ({
               <span>Polo Calçadista de Nova Serrana - MG</span>
             </div>
             <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 font-display">
-              Catálogo de Fabricantes em Nova Serrana
+              Catálogo Distribuidora Serrana Spress
             </h1>
             <p className="text-xs sm:text-sm text-slate-600 mt-1 max-w-2xl leading-relaxed">
-              Anunciamos o catálogo dos fabricantes com descrição de grade, tamanhos e preços direto de fábrica para lojistas de todo o Brasil.
+              Calçados direto do polo de Nova Serrana com descrição de grade, tamanhos e preços exclusivos para lojistas de todo o Brasil.
             </p>
           </div>
 
@@ -84,7 +83,7 @@ export const LandingView: React.FC<LandingViewProps> = ({
               <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
               <input
                 type="text"
-                placeholder="Buscar modelo, código ou fabricante..."
+                placeholder="Buscar modelo, categoria ou referência..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="w-full bg-slate-50 border border-slate-200 pl-10 pr-4 py-2.5 text-xs rounded-xl text-slate-900 placeholder-slate-400 focus:bg-white focus:outline-none focus:border-[#ff5500] focus:ring-2 focus:ring-orange-100 transition-all font-medium"
