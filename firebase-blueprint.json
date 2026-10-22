@@ -1,0 +1,123 @@
+{
+  "entities": {
+    "Product": {
+      "title": "Product",
+      "description": "Footwear box listing created by manufacturers in Nova Serrana",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "manufacturerId": { "type": "string" },
+        "manufacturerName": { "type": "string" },
+        "manufacturerCity": { "type": "string" },
+        "name": { "type": "string" },
+        "referenceCode": { "type": "string" },
+        "category": { "type": "string" },
+        "description": { "type": "string" },
+        "upperMaterial": { "type": "string" },
+        "soleMaterial": { "type": "string" },
+        "insoleMaterial": { "type": "string" },
+        "pricePerPair": { "type": "number" },
+        "pairsPerBox": { "type": "number" },
+        "pricePerBox": { "type": "number" },
+        "stockBoxes": { "type": "number" },
+        "leadTimeDays": { "type": "number" },
+        "photos": { "type": "array" },
+        "sizesDistribution": { "type": "array" },
+        "colors": { "type": "array" },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["id", "manufacturerId", "name", "pricePerPair", "pairsPerBox", "pricePerBox"]
+    },
+    "Manufacturer": {
+      "title": "Manufacturer",
+      "description": "Footwear manufacturer profile and credentials",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "role": { "type": "string" },
+        "brandName": { "type": "string" },
+        "legalName": { "type": "string" },
+        "cnpj": { "type": "string" },
+        "city": { "type": "string" },
+        "state": { "type": "string" },
+        "phone": { "type": "string" },
+        "email": { "type": "string" },
+        "password": { "type": "string" },
+        "bio": { "type": "string" },
+        "commissionRateAccepted": { "type": "number" },
+        "termsAccepted": { "type": "boolean" },
+        "termsAcceptedAt": { "type": "string" },
+        "isVerified": { "type": "boolean" },
+        "address": { "type": "object" },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["id", "brandName", "cnpj", "email"]
+    },
+    "Retailer": {
+      "title": "Retailer",
+      "description": "Shoe retailer / store profile",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "role": { "type": "string" },
+        "storeName": { "type": "string" },
+        "legalName": { "type": "string" },
+        "cnpj": { "type": "string" },
+        "contactPerson": { "type": "string" },
+        "email": { "type": "string" },
+        "password": { "type": "string" },
+        "phone": { "type": "string" },
+        "address": { "type": "object" },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["id", "storeName", "cnpj", "email"]
+    },
+    "Order": {
+      "title": "Order",
+      "description": "Footwear wholesale purchase order mediated by Distribuidora Serrana Spress",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "retailerId": { "type": "string" },
+        "retailerName": { "type": "string" },
+        "retailerCnpj": { "type": "string" },
+        "retailerPhone": { "type": "string" },
+        "deliveryAddress": { "type": "object" },
+        "items": { "type": "array" },
+        "totalPairs": { "type": "number" },
+        "totalBoxes": { "type": "number" },
+        "subtotal": { "type": "number" },
+        "shippingCost": { "type": "number" },
+        "totalAmount": { "type": "number" },
+        "platformCommissionRate": { "type": "number" },
+        "platformCommissionAmount": { "type": "number" },
+        "manufacturerPayoutAmount": { "type": "number" },
+        "paymentMethod": { "type": "string" },
+        "status": { "type": "string" },
+        "payoutStatus": { "type": "string" },
+        "logistics": { "type": "object" },
+        "createdAt": { "type": "string" },
+        "paidAt": { "type": "string" }
+      },
+      "required": ["id", "retailerId", "items", "totalAmount", "status"]
+    }
+  },
+  "firestore": {
+    "/products/{productId}": {
+      "schema": { "$ref": "#/entities/Product" },
+      "description": "Collection of footwear products listed by manufacturers"
+    },
+    "/manufacturers/{manufacturerId}": {
+      "schema": { "$ref": "#/entities/Manufacturer" },
+      "description": "Registered footwear manufacturers"
+    },
+    "/retailers/{retailerId}": {
+      "schema": { "$ref": "#/entities/Retailer" },
+      "description": "Registered footwear retailers/store owners"
+    },
+    "/orders/{orderId}": {
+      "schema": { "$ref": "#/entities/Order" },
+      "description": "Orders placed through the platform"
+    }
+  }
+}

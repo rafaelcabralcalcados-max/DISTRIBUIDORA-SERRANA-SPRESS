@@ -1,0 +1,6 @@
+{
+  "name": "Serron Hub - Marketplace B2B de Calçados de Nova Serrana",
+  "description": "Catálogo de Fabricantes em Nova Serrana conectando indústrias de calçados a lojistas de todo o Brasil com intermediação segura e faturamento direto.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
