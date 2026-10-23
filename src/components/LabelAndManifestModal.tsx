@@ -27,7 +27,7 @@ export const LabelAndManifestModal: React.FC<LabelAndManifestModalProps> = ({
 }) => {
   const [activeTab, setActiveTab] = useState<'labels' | 'manifest'>('labels');
 
-  // Total closed boxes (volumes). 1 closed box (12 pairs) = 1 volume!
+  // Total closed boxes (volumes). 1 closed box (e.g. 12 pairs) = 1 volume!
   const totalBoxes = order.items.reduce((sum, it) => {
     const qty = typeof it.boxQuantity === 'number' ? it.boxQuantity : parseInt(String(it.boxQuantity) || '0', 10);
     return sum + (isNaN(qty) ? 0 : qty);
@@ -95,20 +95,177 @@ export const LabelAndManifestModal: React.FC<LabelAndManifestModalProps> = ({
   const carrierName = order.carrierInfo?.name || 'A DEFINIR / RETIRADA NO CD';
   const carrierAddress = order.carrierInfo?.address || `${order.deliveryAddress.street}, ${order.deliveryAddress.number} - ${order.deliveryAddress.neighborhood}, ${order.deliveryAddress.city}/${order.deliveryAddress.state}`;
 
-  const handlePrint = () => {
-    window.print();
-  };
-
   // Generate exact copies array matching volumes count (1 label per volume / closed box)
   const totalLabelsToPrint = Math.max(1, volumesCount || 1);
   const copiesArray = Array.from({ length: totalLabelsToPrint }, (_, i) => i + 1);
 
   // Format retailer label text lines
-  const textLines = labelText.split('\n').filter(Boolean);
+  const textLines = labelText.split('\n').map(l => l.trim()).filter(Boolean);
+
+  // Dedicated, isolated thermal print method: guarantees 1 page per volume (never 4 pages)
+  const handlePrint = () => {
+    if (activeTab === 'labels') {
+      printThermalLabelsIsolated();
+    } else {
+      printA4ManifestIsolated();
+    }
+  };
+
+  const printThermalLabelsIsolated = () => {
+    const existingFrame = document.getElementById('thermal-print-frame');
+    if (existingFrame) existingFrame.remove();
+
+    const iframe = document.createElement('iframe');
+    iframe.id = 'thermal-print-frame';
+    iframe.style.position = 'fixed';
+    iframe.style.top = '0';
+    iframe.style.left = '0';
+    iframe.style.width = '1px';
+    iframe.style.height = '1px';
+    iframe.style.border = 'none';
+    iframe.style.opacity = '0.01';
+    iframe.style.pointerEvents = 'none';
+    document.body.appendChild(iframe);
+
+    const doc = iframe.contentWindow?.document || iframe.contentDocument;
+    if (!doc) {
+      window.print();
+      return;
+    }
+
+    const volumeText = `${volumesCount} ${volumesCount === 1 ? 'VOLUME' : 'VOLUMES'}`;
+    const escapedLines = textLines.map(line =>
+      `<div>${line.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</div>`
+    ).join('');
+
+    let pagesHtml = '';
+    for (let i = 0; i < totalLabelsToPrint; i++) {
+      pagesHtml += `
+        <div class="label-page">
+          <table class="label-table">
+            <tr>
+              <td class="text-top-cell">
+                <div class="text-top-content">
+                  ${escapedLines || '<div>' + labelText + '</div>'}
+                </div>
+              </td>
+            </tr>
+            <tr>
+              <td class="text-bottom-cell">
+                <div class="text-bottom-content">
+                  ${volumeText}
+                </div>
+              </td>
+            </tr>
+          </table>
+        </div>
+      `;
+    }
+
+    const htmlContent = `
+      <!DOCTYPE html>
+      <html lang="pt-BR">
+      <head>
+        <meta charset="utf-8">
+        <title>Etiquetas Térmicas - ${order.id}</title>
+        <style>
+          @page {
+            size: 150mm 100mm landscape;
+            margin: 0;
+          }
+          * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
+          }
+          html, body {
+            width: 150mm;
+            background: #ffffff;
+            font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+            overflow: visible;
+          }
+          .label-page {
+            width: 150mm;
+            height: 100mm;
+            max-height: 100mm;
+            page-break-after: always;
+            break-after: page;
+            page-break-inside: avoid;
+            break-inside: avoid;
+            overflow: hidden;
+            background: #ffffff;
+            box-sizing: border-box;
+            padding: 6mm 8mm;
+          }
+          .label-page:last-child {
+            page-break-after: avoid;
+            break-after: avoid;
+          }
+          .label-table {
+            width: 100%;
+            height: 88mm;
+            border-collapse: collapse;
+            table-layout: fixed;
+          }
+          .text-top-cell {
+            vertical-align: middle;
+            text-align: center;
+            height: 65%;
+            padding: 0 4mm;
+          }
+          .text-top-content {
+            font-size: ${textLines.length > 2 ? '24pt' : '30pt'};
+            font-weight: 900;
+            line-height: 1.15;
+            text-transform: uppercase;
+            word-break: break-word;
+            color: #000000;
+          }
+          .text-bottom-cell {
+            vertical-align: bottom;
+            text-align: center;
+            height: 35%;
+            padding-bottom: 2mm;
+          }
+          .text-bottom-content {
+            font-size: 28pt;
+            font-weight: 900;
+            line-height: 1;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: #000000;
+          }
+        </style>
+      </head>
+      <body>
+        ${pagesHtml}
+      </body>
+      </html>
+    `;
+
+    doc.open();
+    doc.write(htmlContent);
+    doc.close();
+
+    setTimeout(() => {
+      try {
+        iframe.contentWindow?.focus();
+        iframe.contentWindow?.print();
+      } catch {
+        window.print();
+      }
+    }, 250);
+  };
+
+  const printA4ManifestIsolated = () => {
+    window.print();
+  };
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-slate-950/75 backdrop-blur-xs">
-      {/* PRINT CSS STYLES FOR STRICT HORIZONTAL 150x100MM THERMAL & A4 SHEETS */}
+      {/* PRINT CSS STYLES AS COMPATIBILITY FALLBACK */}
       <style>{`
         @media screen {
           .print-only-copy {
@@ -134,7 +291,7 @@ export const LabelAndManifestModal: React.FC<LabelAndManifestModalProps> = ({
             position: absolute;
             left: 0;
             top: 0;
-            width: 100%;
+            width: 150mm;
             background: transparent !important;
             padding: 0 !important;
             margin: 0 !important;
@@ -145,32 +302,31 @@ export const LabelAndManifestModal: React.FC<LabelAndManifestModalProps> = ({
           }
 
           .print-only-copy {
-            display: flex !important;
+            display: block !important;
           }
 
-          /* Thermal Label Mode - Strictly Horizontal (150mm x 100mm) */
           .thermal-box-label {
-            width: 148mm !important;
-            height: 98mm !important;
-            max-height: 98mm !important;
+            width: 150mm !important;
+            height: 100mm !important;
+            max-height: 100mm !important;
             page-break-after: always !important;
             break-after: page !important;
             page-break-inside: avoid !important;
             break-inside: avoid !important;
+            overflow: hidden !important;
             margin: 0 auto !important;
-            display: flex !important;
-            flex-direction: column !important;
-            align-items: center !important;
-            justify-content: center !important;
-            text-align: center !important;
             box-sizing: border-box !important;
             background: #ffffff !important;
             color: #000000 !important;
             border: none !important;
-            padding: 8mm 6mm !important;
+            padding: 6mm 8mm !important;
           }
 
-          /* A4 Manifest Sheet Mode */
+          .thermal-box-label:last-child {
+            page-break-after: avoid !important;
+            break-after: avoid !important;
+          }
+
           .a4-page {
             width: 210mm !important;
             min-height: 297mm !important;
@@ -232,7 +388,7 @@ export const LabelAndManifestModal: React.FC<LabelAndManifestModalProps> = ({
             }`}
           >
             <Tag className="w-4 h-4" />
-            <span>Etiquetas para as Caixas ({totalLabelsToPrint} Etiquetas = {totalLabelsToPrint} Volumes)</span>
+            <span>Etiquetas para as Caixas ({totalLabelsToPrint} {totalLabelsToPrint === 1 ? 'Etiqueta' : 'Etiquetas'} = {totalLabelsToPrint} {totalLabelsToPrint === 1 ? 'Volume' : 'Volumes'})</span>
           </button>
           <button
             onClick={() => setActiveTab('manifest')}
@@ -344,50 +500,55 @@ export const LabelAndManifestModal: React.FC<LabelAndManifestModalProps> = ({
                     {copiesArray.map((copyNum, idx) => (
                       <div
                         key={idx}
-                        className={`thermal-box-label bg-white text-black border border-slate-300 rounded-xl shadow-md font-sans flex flex-col items-center justify-center text-center select-none ${
+                        className={`thermal-box-label bg-white text-black border border-slate-300 rounded-xl shadow-md font-sans select-none ${
                           idx > 0 && !showAllCopiesOnScreen ? 'print-only-copy' : ''
                         }`}
                         style={{
                           width: '480px',
                           height: '320px',
                           maxWidth: '100%',
-                          padding: '36px 24px',
+                          padding: '24px 20px',
                         }}
                       >
-                        {/* RETAILER DESCRIPTION (CENTRAL & HUGE) */}
-                        <div className="flex-1 flex flex-col justify-center items-center w-full">
-                          <div className="space-y-1.5 w-full max-w-[94%]">
-                            {textLines.length > 0 ? (
-                              textLines.map((line, lIdx) => (
+                        <table style={{ width: '100%', height: '100%', borderCollapse: 'collapse', tableLayout: 'fixed' }}>
+                          <tbody>
+                            <tr>
+                              <td style={{ verticalAlign: 'middle', textAlign: 'center', height: '65%', padding: '0 8px' }}>
+                                <div className="space-y-1 w-full">
+                                  {textLines.length > 0 ? (
+                                    textLines.map((line, lIdx) => (
+                                      <div
+                                        key={lIdx}
+                                        className="text-2xl sm:text-3xl md:text-4xl font-black text-black uppercase tracking-wide leading-tight break-words text-center"
+                                        style={{
+                                          fontFamily: 'system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif',
+                                        }}
+                                      >
+                                        {line}
+                                      </div>
+                                    ))
+                                  ) : (
+                                    <div className="text-3xl font-black text-black uppercase tracking-wide text-center">
+                                      {labelText}
+                                    </div>
+                                  )}
+                                </div>
+                              </td>
+                            </tr>
+                            <tr>
+                              <td style={{ verticalAlign: 'bottom', textAlign: 'center', height: '35%', paddingBottom: '8px' }}>
                                 <div
-                                  key={lIdx}
-                                  className="text-3xl sm:text-4xl md:text-5xl font-black text-black uppercase tracking-wide leading-tight break-words text-center"
+                                  className="text-2xl sm:text-3xl md:text-4xl font-black text-black uppercase tracking-wider"
                                   style={{
                                     fontFamily: 'system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif',
                                   }}
                                 >
-                                  {line}
+                                  {volumesCount} {volumesCount === 1 ? 'VOLUME' : 'VOLUMES'}
                                 </div>
-                              ))
-                            ) : (
-                              <div className="text-4xl font-black text-black uppercase tracking-wide text-center">
-                                {labelText}
-                              </div>
-                            )}
-                          </div>
-                        </div>
-
-                        {/* QUANTITY OF VOLUMES (BOTTOM & BIG) */}
-                        <div className="w-full pt-4 pb-2 text-center">
-                          <div
-                            className="text-3xl sm:text-4xl md:text-5xl font-black text-black uppercase tracking-wider"
-                            style={{
-                              fontFamily: 'system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif',
-                            }}
-                          >
-                            {volumesCount} {volumesCount === 1 ? 'VOLUME' : 'VOLUMES'}
-                          </div>
-                        </div>
+                              </td>
+                            </tr>
+                          </tbody>
+                        </table>
                       </div>
                     ))}
                   </div>
@@ -599,7 +760,7 @@ export const LabelAndManifestModal: React.FC<LabelAndManifestModalProps> = ({
         <div className="p-4 border-t border-slate-200 bg-white flex justify-between items-center no-print">
           <div className="text-xs text-slate-500 flex items-center gap-2">
             <CheckCircle2 className="w-4 h-4 text-emerald-600" />
-            <span>Formato exclusivamente horizontal (150×100 mm): 1 caixa fechada (12 pares) = 1 volume = 1 etiqueta impressa.</span>
+            <span>Formato horizontal (150×100 mm): exatamente 1 página por volume/caixa (sem código QR).</span>
           </div>
 
           <div className="flex items-center gap-2">
