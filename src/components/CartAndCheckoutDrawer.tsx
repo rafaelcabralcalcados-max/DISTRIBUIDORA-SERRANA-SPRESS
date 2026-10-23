@@ -749,7 +749,7 @@ export const CartAndCheckoutDrawer: React.FC<CartAndCheckoutDrawerProps> = ({
               <div className="p-3.5 bg-orange-50 border border-orange-200 rounded-2xl text-xs text-orange-950 text-left flex items-start gap-2.5">
                 <Truck className="w-4 h-4 text-[#ff5500] shrink-0 mt-0.5" />
                 <span>
-                  <strong>Próxima Etapa:</strong> O fabricante entregará os produtos no Centro de Distribuição da Distribuidora Serrana Spress em Nova Serrana para consolidação, conferência e despacho ao seu endereço.
+                  <strong>Próxima Etapa:</strong> O fabricante entregará os produtos no Centro de Distribuição Serrana Spress em Nova Serrana para consolidação, conferência e despacho ao seu endereço.
                 </span>
               </div>
 

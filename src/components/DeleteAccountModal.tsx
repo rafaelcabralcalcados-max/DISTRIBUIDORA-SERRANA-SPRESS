@@ -167,7 +167,7 @@ export const DeleteAccountModal: React.FC<DeleteAccountModalProps> = ({
                   </h4>
                   <p className="text-xs text-amber-900 mt-1 leading-relaxed">
                     {isManufacturer
-                      ? 'Conforme as regras operacionais, um fabricante só pode excluir sua conta se NÃO houver nenhum pedido pendente para entregar ao Centro de Distribuição da Distribuidora Serrana Spress ou em trânsito.'
+                      ? 'Conforme as regras operacionais, um fabricante só pode excluir sua conta se NÃO houver nenhum pedido pendente para entregar ao Centro de Distribuição Serrana Spress ou em trânsito.'
                       : 'Conforme as regras operacionais, um lojista só pode excluir sua conta se NÃO houver nenhuma compra com status em andamento.'}
                   </p>
                 </div>

@@ -59,7 +59,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onRefresh }) => {
   const pendingLogisticsCount = orders.filter(o => !o.logistics).length;
 
   const handleSaveLogistics = (orderId: string) => {
-    const label = 'Entrega no Centro de Distribuição Distribuidora Serrana Spress (Nova Serrana)';
+    const label = 'Entrega no Centro de Distribuição Serrana Spress (Nova Serrana)';
 
     const logistics: LogisticsOption = {
       type: 'entrega_cd_serron',
@@ -67,11 +67,11 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onRefresh }) => {
       notes: logisticsNotes.trim() || undefined,
       trackingCode: trackingCode.trim() || undefined,
       assignedAt: new Date().toISOString(),
-      assignedBy: 'Administração Distribuidora Serrana Spress',
+      assignedBy: 'Administração Serrana Spress',
     };
 
     storageService.updateOrderLogistics(orderId, logistics);
-    setActionFeedback(`Instrução de entrega no CD Distribuidora Serrana Spress confirmada para o pedido ${orderId}!`);
+    setActionFeedback(`Instrução de entrega no CD Serrana Spress confirmada para o pedido ${orderId}!`);
     setTimeout(() => {
       setActionFeedback('');
       setEditingOrderId(null);
@@ -212,7 +212,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onRefresh }) => {
                 Gestão de Pedidos Concluídos
               </h2>
               <p className="text-xs text-slate-500">
-                Visualize os pedidos pagos pelos lojistas e gerencie o recebimento no Centro de Distribuição Distribuidora Serrana Spress e o despacho.
+                Visualize os pedidos pagos pelos lojistas e gerencie o recebimento no Centro de Distribuição Serrana Spress e o despacho.
               </p>
             </div>
           </div>
@@ -222,7 +222,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onRefresh }) => {
               <Package className="w-12 h-12 text-slate-400 mx-auto mb-3" />
               <h3 className="text-base font-bold text-slate-900">Nenhum pedido realizado ainda</h3>
               <p className="text-xs text-slate-500 mt-1 max-w-md mx-auto">
-                O banco de dados está limpo. Assim que um lojista comprar calçados na vitrine, o pedido aparecerá aqui para você emitir a instrução de entrega no CD Distribuidora Serrana Spress e o despacho.
+                O banco de dados está limpo. Assim que um lojista comprar calçados na vitrine, o pedido aparecerá aqui para você emitir a instrução de entrega no CD Serrana Spress e o despacho.
               </p>
             </div>
           ) : (
@@ -359,7 +359,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onRefresh }) => {
                         <div className="flex items-center gap-2">
                           <Truck className="w-4 h-4 text-[#ff5500]" />
                           <span className="text-xs font-extrabold text-slate-900 uppercase tracking-wider">
-                            Logística Central: Entrega no CD Distribuidora Serrana Spress
+                            Logística Central: Entrega no CD Serrana Spress
                           </span>
                         </div>
 
@@ -407,10 +407,10 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onRefresh }) => {
                             </div>
                             <div>
                               <span className="text-xs font-bold text-slate-900 block">
-                                Entrega no Centro de Distribuição Distribuidora Serrana Spress (Nova Serrana)
+                                Entrega no Centro de Distribuição Serrana Spress (Nova Serrana)
                               </span>
                               <span className="text-[11px] text-slate-500 mt-0.5 block leading-relaxed">
-                                Regra Operacional: O fabricante entrega o produto diretamente no Centro de Distribuição Distribuidora Serrana Spress em Nova Serrana. Não há coleta na empresa do fabricante.
+                                Regra Operacional: O fabricante entrega o produto diretamente no Centro de Distribuição Serrana Spress em Nova Serrana. Não há coleta na empresa do fabricante.
                               </span>
                             </div>
                           </div>
@@ -422,7 +422,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onRefresh }) => {
                               </label>
                               <input
                                 type="text"
-                                placeholder="Ex: Entregar até 24/10 às 16h no CD Distribuidora Serrana Spress - Doca 2"
+                                placeholder="Ex: Entregar até 24/10 às 16h no CD Serrana Spress - Doca 2"
                                 value={logisticsNotes}
                                 onChange={(e) => setLogisticsNotes(e.target.value)}
                                 className="w-full bg-white border border-slate-200 px-3.5 py-2 text-xs rounded-xl"
@@ -458,7 +458,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onRefresh }) => {
                               className="px-5 py-2 bg-[#ff5500] hover:bg-[#ea580c] text-white text-xs font-bold rounded-xl transition-all shadow-xs flex items-center gap-1.5 cursor-pointer"
                             >
                               <CheckCircle className="w-3.5 h-3.5" />
-                              <span>Confirmar Entrega no CD Distribuidora Serrana Spress</span>
+                              <span>Confirmar Entrega no CD Serrana Spress</span>
                             </button>
                           </div>
                         </div>

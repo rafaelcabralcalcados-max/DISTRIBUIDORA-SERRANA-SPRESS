@@ -21,7 +21,10 @@ import { testConnection } from './services/firebase';
 export default function App() {
   const [currentUser, setCurrentUser] = useState<CurrentUser | null>(() => storageService.getCurrentUser());
   const [products, setProducts] = useState<ProductBox[]>(() => storageService.getProducts());
-  const [cartItems, setCartItems] = useState<CartItem[]>([]);
+  const [cartItems, setCartItems] = useState<CartItem[]>(() => {
+    const user = storageService.getCurrentUser();
+    return storageService.getCartForUser(user ? user.id : 'guest');
+  });
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [isAuthOpen, setIsAuthOpen] = useState(false);
   const [authRole, setAuthRole] = useState<'retailer' | 'manufacturer' | 'admin'>('retailer');
@@ -48,13 +51,40 @@ export default function App() {
     };
   }, []);
 
+  // Isolate and synchronize cart whenever currentUser changes
+  useEffect(() => {
+    if (currentUser?.id) {
+      storageService.fetchUserCart(currentUser.id).then((items) => {
+        setCartItems(items);
+      });
+    } else {
+      // User is logged out: restore empty guest cart (never keep previous user's items)
+      const guestCart = storageService.getCartForUser('guest');
+      setCartItems(guestCart);
+    }
+  }, [currentUser?.id]);
+
   const handleOpenAuth = (role: 'retailer' | 'manufacturer' | 'admin' = 'retailer') => {
     setAuthRole(role);
     setIsAuthOpen(true);
   };
 
-  const handleAuthSuccess = (user: CurrentUser) => {
+  const handleAuthSuccess = async (user: CurrentUser) => {
     setCurrentUser(user);
+
+    // Fetch this user's isolated cart from storage/Firestore
+    const userCart = await storageService.fetchUserCart(user.id);
+    if (userCart.length > 0) {
+      setCartItems(userCart);
+      storageService.clearCartForUser('guest');
+    } else if (cartItems.length > 0) {
+      // If guest had items in the cart before logging in, transfer them to this user's account
+      storageService.saveCartForUser(cartItems, user.id);
+      storageService.clearCartForUser('guest');
+    } else {
+      setCartItems([]);
+    }
+
     if (user.role === 'admin') {
       setActiveView('admin');
     } else if (user.role === 'manufacturer') {
@@ -65,12 +95,18 @@ export default function App() {
   };
 
   const handleLogout = async () => {
+    // Persist current user's cart before logging out so their cart is saved for next login
+    if (currentUser) {
+      storageService.saveCartForUser(cartItems, currentUser.id);
+    }
     await storageService.logoutUserAsync();
     setCurrentUser(null);
+    setCartItems([]); // Reset cart to 0 immediately on logout
+    storageService.clearCartForUser('guest');
     setActiveView('landing');
   };
 
-  // Cart operations with Color Support
+  // Cart operations with Color Support & Per-User Isolation
   const handleAddToCart = (
     product: ProductBox,
     boxQuantity: number,
@@ -82,23 +118,27 @@ export default function App() {
       const existing = prev.find(
         item => item.product.id === product.id && item.selectedColor === selectedColor
       );
+      let updated: CartItem[];
       if (existing) {
-        return prev.map(item =>
+        updated = prev.map(item =>
           item.product.id === product.id && item.selectedColor === selectedColor
             ? { ...item, boxQuantity: item.boxQuantity + boxQuantity }
             : item
         );
+      } else {
+        updated = [
+          ...prev,
+          {
+            product,
+            boxQuantity,
+            selectedColor,
+            selectedColorHex,
+            selectedColorPhoto: selectedColorPhoto || product.photos?.[0],
+          },
+        ];
       }
-      return [
-        ...prev,
-        {
-          product,
-          boxQuantity,
-          selectedColor,
-          selectedColorHex,
-          selectedColorPhoto: selectedColorPhoto || product.photos?.[0],
-        },
-      ];
+      storageService.saveCartForUser(updated, currentUser ? currentUser.id : 'guest');
+      return updated;
     });
     setIsCartOpen(true);
   };
@@ -108,24 +148,29 @@ export default function App() {
       handleRemoveCartItem(productId, selectedColor);
       return;
     }
-    setCartItems(prev =>
-      prev.map(item =>
+    setCartItems(prev => {
+      const updated = prev.map(item =>
         item.product.id === productId && item.selectedColor === selectedColor
           ? { ...item, boxQuantity: quantity }
           : item
-      )
-    );
+      );
+      storageService.saveCartForUser(updated, currentUser ? currentUser.id : 'guest');
+      return updated;
+    });
   };
 
   const handleRemoveCartItem = (productId: string, selectedColor?: string) => {
-    setCartItems(prev =>
-      prev.filter(
+    setCartItems(prev => {
+      const updated = prev.filter(
         item => !(item.product.id === productId && item.selectedColor === selectedColor)
-      )
-    );
+      );
+      storageService.saveCartForUser(updated, currentUser ? currentUser.id : 'guest');
+      return updated;
+    });
   };
 
   const handleClearCart = () => {
+    storageService.clearCartForUser(currentUser ? currentUser.id : 'guest');
     setCartItems([]);
   };
 

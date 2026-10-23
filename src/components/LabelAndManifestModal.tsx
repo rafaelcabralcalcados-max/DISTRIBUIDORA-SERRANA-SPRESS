@@ -737,7 +737,7 @@ export const LabelAndManifestModal: React.FC<LabelAndManifestModalProps> = ({
                 {/* CD Checklist & Dispatch Signatures */}
                 <div className="border-t-2 border-black pt-4 space-y-4">
                   <div className="text-xs font-bold uppercase text-slate-800">
-                    Checklist de Expedição Distribuidora Serrana Spress:
+                    Checklist de Expedição Serrana Spress:
                   </div>
 
                   <div className="grid grid-cols-2 gap-3 text-xs">
@@ -763,7 +763,7 @@ export const LabelAndManifestModal: React.FC<LabelAndManifestModalProps> = ({
                     <div className="text-center">
                       <div className="border-b border-black mb-1"></div>
                       <span className="text-[10px] font-bold uppercase block text-slate-700">
-                        Conferente CD Distribuidora Serrana Spress
+                        Conferente CD Serrana Spress
                       </span>
                       <span className="text-[9px] text-slate-500">Assinatura / Data</span>
                     </div>

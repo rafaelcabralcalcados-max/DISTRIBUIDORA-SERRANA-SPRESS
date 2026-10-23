@@ -1130,7 +1130,7 @@ export const ManufacturerDashboard: React.FC<ManufacturerDashboardProps> = ({
               Pedidos de Atacado Recebidos
             </h2>
             <p className="text-xs text-slate-500">
-              Acompanhe as caixas fechadas vendidas e as instruções logísticas da administração Distribuidora Serrana Spress. A plataforma faz a ponte exclusiva.
+              Acompanhe as caixas fechadas vendidas e as instruções logísticas da Serrana Spress. A plataforma faz a ponte exclusiva.
             </p>
           </div>
 
@@ -1168,7 +1168,7 @@ export const ManufacturerDashboard: React.FC<ManufacturerDashboardProps> = ({
                           </span>
                         </div>
                         <div className="text-[11px] text-slate-500 mt-0.5">
-                          Data da Compra: {new Date(ord.createdAt).toLocaleDateString('pt-BR')} · Intermediação Distribuidora Serrana Spress
+                          Data da Compra: {new Date(ord.createdAt).toLocaleDateString('pt-BR')} · Intermediação Serrana Spress
                         </div>
 
                         {/* Identification for box */}
@@ -1249,11 +1249,11 @@ export const ManufacturerDashboard: React.FC<ManufacturerDashboardProps> = ({
                       ))}
                     </div>
 
-                    {/* Logistics Instruction from Distribuidora Serrana Spress Administration */}
+                    {/* Logistics Instruction from Serrana Spress Administration */}
                     <div className="p-4 rounded-2xl border flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 bg-orange-50/50 border-orange-200">
                       <div>
                         <span className="text-[10px] uppercase font-bold text-slate-600 tracking-wider block">
-                          Instrução Logística Definida pela Administração Distribuidora Serrana Spress:
+                          Instrução Logística Definida pela Administração Serrana Spress:
                         </span>
                         {ord.logistics ? (
                           <div className="mt-1 flex items-center gap-2">
@@ -1270,7 +1270,7 @@ export const ManufacturerDashboard: React.FC<ManufacturerDashboardProps> = ({
                         ) : (
                           <div className="mt-1 flex items-center gap-1.5 text-xs text-amber-800">
                             <Clock className="w-4 h-4 text-amber-600" />
-                            <span>Aguardando confirmação de entrega no Centro de Distribuição Distribuidora Serrana Spress...</span>
+                            <span>Aguardando confirmação de entrega no Centro de Distribuição Serrana Spress...</span>
                           </div>
                         )}
                       </div>
@@ -1306,7 +1306,7 @@ export const ManufacturerDashboard: React.FC<ManufacturerDashboardProps> = ({
               Endereço Físico & Dados da Fábrica
             </h2>
             <p className="text-xs text-slate-500 mt-1">
-              Mantenha o endereço do galpão/indústria e contatos atualizados para emissão de notas e controle administrativo Distribuidora Serrana Spress.
+              Mantenha o endereço do galpão/indústria e contatos atualizados para emissão de notas e controle administrativo da Serrana Spress.
             </p>
           </div>
 
@@ -1530,7 +1530,7 @@ export const ManufacturerDashboard: React.FC<ManufacturerDashboardProps> = ({
                 <strong className="text-slate-900 block font-semibold mb-0.5">
                   Fluxo Operacional de Entrega de Caixas Fechadas:
                 </strong>
-                Após a confirmação de venda de cada caixa fechada, o fabricante entrega as mercadorias diretamente no Centro de Distribuição da Distribuidora Serrana Spress em Nova Serrana. Não há coleta avulsa na empresa.
+                Após a confirmação de venda de cada caixa fechada, o fabricante entrega as mercadorias diretamente no Centro de Distribuição Serrana Spress em Nova Serrana. Não há coleta avulsa na empresa.
               </div>
             </div>
 

@@ -1,5 +1,6 @@
 import {
   AdminUser,
+  CartItem,
   CurrentUser,
   LogisticsOption,
   Manufacturer,
@@ -9,7 +10,7 @@ import {
   Retailer
 } from '../types';
 import { auth, db, testConnection } from './firebase';
-import { collection, doc, setDoc, deleteDoc, onSnapshot, getDocs } from 'firebase/firestore';
+import { collection, doc, setDoc, deleteDoc, onSnapshot, getDocs, getDoc } from 'firebase/firestore';
 import {
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
@@ -474,7 +475,113 @@ class StorageService {
     } catch {
       // ignore
     }
+    try {
+      localStorage.removeItem('serrana_cart_guest');
+    } catch {
+      // ignore
+    }
     this.setCurrentUser(null);
+  }
+
+  // ==========================================
+  // CARTS (STRICTLY ISOLATED PER USER & FIRESTORE BACKED)
+  // ==========================================
+  private getCartStorageKey(userId?: string | null): string {
+    const cleanId = (userId || '').trim();
+    return cleanId ? `serrana_cart_user_${cleanId}` : 'serrana_cart_guest';
+  }
+
+  getCartForUser(userId?: string | null): CartItem[] {
+    try {
+      const key = this.getCartStorageKey(userId);
+      const raw = localStorage.getItem(key);
+      if (!raw) return [];
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed)) {
+        return parsed.filter(item => item && item.product && item.boxQuantity > 0);
+      }
+      return [];
+    } catch {
+      return [];
+    }
+  }
+
+  saveCartForUser(items: CartItem[], userId?: string | null): void {
+    const cleanItems = (items || []).filter(item => item && item.product && item.boxQuantity > 0);
+    const key = this.getCartStorageKey(userId);
+    try {
+      if (cleanItems.length > 0) {
+        localStorage.setItem(key, JSON.stringify(cleanItems));
+      } else {
+        localStorage.removeItem(key);
+      }
+    } catch {
+      // ignore
+    }
+
+    // If it's an authenticated user, sync to Cloud Firestore
+    const cleanId = (userId || '').trim();
+    if (cleanId && cleanId !== 'guest') {
+      try {
+        if (cleanItems.length > 0) {
+          setDoc(doc(db, 'user_carts', cleanId), {
+            userId: cleanId,
+            items: cleanForFirestore(cleanItems),
+            updatedAt: new Date().toISOString()
+          }).catch(() => {});
+        } else {
+          deleteDoc(doc(db, 'user_carts', cleanId)).catch(() => {});
+        }
+      } catch {
+        // ignore
+      }
+    }
+  }
+
+  async fetchUserCart(userId: string): Promise<CartItem[]> {
+    if (!userId || userId === 'guest') {
+      return this.getCartForUser('guest');
+    }
+
+    // Try local storage first
+    const localCart = this.getCartForUser(userId);
+
+    // Also check Cloud Firestore
+    try {
+      const docSnap = await getDoc(doc(db, 'user_carts', userId));
+      if (docSnap.exists()) {
+        const data = docSnap.data();
+        if (data && Array.isArray(data.items)) {
+          const remoteItems = data.items as CartItem[];
+          if (remoteItems.length > 0) {
+            this.saveCartForUser(remoteItems, userId);
+            return remoteItems;
+          }
+        }
+      }
+    } catch (e) {
+      console.warn('Firestore fetchUserCart notice:', e);
+    }
+
+    return localCart;
+  }
+
+  clearCartForUser(userId?: string | null): void {
+    const key = this.getCartStorageKey(userId);
+    try {
+      localStorage.removeItem(key);
+    } catch {
+      // ignore
+    }
+
+    const cleanId = (userId || '').trim();
+    if (cleanId && cleanId !== 'guest') {
+      try {
+        deleteDoc(doc(db, 'user_carts', cleanId)).catch(() => {});
+      } catch {
+        // ignore
+      }
+    }
   }
 
   // ==========================================

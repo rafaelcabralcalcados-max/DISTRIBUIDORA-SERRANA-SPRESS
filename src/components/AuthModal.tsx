@@ -801,7 +801,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                     <p>1. Venda Exclusiva de Caixas Fechadas: Proibido fracionamento avulso.</p>
                     <p>2. Repasse Líquido: Valor Bruto descontada a taxa de {DEFAULT_COMMISSION_PERCENT}%.</p>
                     <p>3. Padrão de Fabricação: Embalagem e grade conferidas conforme cadastro.</p>
-                    <p>4. Entrega no CD: O fabricante deverá entregar os produtos no Centro de Distribuição da Distribuidora Serrana Spress em Nova Serrana (sem coleta na empresa).</p>
+                    <p>4. Entrega no CD: O fabricante deverá entregar os produtos no Centro de Distribuição Serrana Spress em Nova Serrana (sem coleta na empresa).</p>
                   </div>
                 )}
 

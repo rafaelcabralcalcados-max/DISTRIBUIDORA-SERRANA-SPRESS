@@ -445,10 +445,10 @@ export const RetailerDashboard: React.FC<RetailerDashboardProps> = ({
                     <Truck className="w-4 h-4 text-[#ff5500]" />
                     <div>
                       <span className="text-slate-500 block text-[10px] uppercase font-bold">
-                        Roteamento Logístico Distribuidora Serrana Spress:
+                        Roteamento Logístico Serrana Spress:
                       </span>
                       <span className="font-bold text-slate-900">
-                        {ord.logistics?.label || 'Aguardando definição pela administração Distribuidora Serrana Spress'}
+                        {ord.logistics?.label || 'Aguardando definição pela administração Serrana Spress'}
                       </span>
                       {ord.logistics?.notes && (
                         <span className="text-slate-600 text-[11px] block mt-0.5">
