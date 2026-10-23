@@ -893,6 +893,8 @@ export const RetailerDashboard: React.FC<RetailerDashboardProps> = ({
           isOpen={!!selectedOrderForLabels}
           onClose={() => setSelectedOrderForLabels(null)}
           order={selectedOrderForLabels}
+          readOnly={true}
+          hideManifest={true}
         />
       )}
     </div>

@@ -1590,6 +1590,9 @@ export const ManufacturerDashboard: React.FC<ManufacturerDashboardProps> = ({
           isOpen={!!selectedOrderForLabels}
           onClose={() => setSelectedOrderForLabels(null)}
           order={selectedOrderForLabels}
+          readOnly={true}
+          hideManifest={true}
+          manufacturerId={manufacturer.id}
         />
       )}
     </div>
