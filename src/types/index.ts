@@ -173,5 +173,14 @@ export interface Order {
   payoutReceiptNote?: string;
   logistics?: LogisticsOption;
   orderStatus: OrderStatus;
+  boxLabelIdentification?: string; // Text to be printed prominently on each box (e.g. "LEANDRO MATO GROSSO")
+  carrierInfo?: {
+    name: string;
+    address: string;
+    city?: string;
+    state?: string;
+    phone?: string;
+    notes?: string;
+  };
   createdAt: string;
 }

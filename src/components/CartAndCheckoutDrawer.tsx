@@ -19,7 +19,8 @@ import {
   Lock,
   MapPin,
   Loader2,
-  Search
+  Search,
+  Tag
 } from 'lucide-react';
 
 interface CartAndCheckoutDrawerProps {
@@ -63,6 +64,15 @@ export const CartAndCheckoutDrawer: React.FC<CartAndCheckoutDrawerProps> = ({
   const [zipCode, setZipCode] = useState(retailer?.address?.zipCode || '');
   const [loadingCep, setLoadingCep] = useState(false);
   const [cepSuccess, setCepSuccess] = useState(false);
+
+  // Label Identification (e.g. "LEANDRO MATO GROSSO") and Carrier info
+  const [boxLabelIdentification, setBoxLabelIdentification] = useState(
+    retailer ? `${retailer.storeName} - ${retailer.address.city}/${retailer.address.state}` : ''
+  );
+  const [carrierName, setCarrierName] = useState('');
+  const [carrierAddress, setCarrierAddress] = useState('');
+  const [carrierPhone, setCarrierPhone] = useState('');
+  const [carrierNotes, setCarrierNotes] = useState('');
 
   const handleCepSearch = async (overrideCep?: string) => {
     const raw = overrideCep !== undefined ? overrideCep : zipCode;
@@ -123,7 +133,7 @@ export const CartAndCheckoutDrawer: React.FC<CartAndCheckoutDrawerProps> = ({
       productName: item.product.name,
       referenceCode: item.product.referenceCode,
       manufacturerId: item.product.manufacturerId,
-      manufacturerName: item.product.manufacturerName,
+      manufacturerName: 'Distribuidora Serrana Spress',
       boxQuantity: item.boxQuantity,
       pairsPerBox: item.product.pairsPerBox,
       totalPairs: item.boxQuantity * item.product.pairsPerBox,
@@ -162,6 +172,15 @@ export const CartAndCheckoutDrawer: React.FC<CartAndCheckoutDrawerProps> = ({
       manufacturerNetPayout: netPayout,
       payoutStatus: 'pendente',
       orderStatus: 'pago_aguardando_logistica',
+      boxLabelIdentification: boxLabelIdentification.trim() || `${storeName} - ${city}/${state}`,
+      carrierInfo: {
+        name: carrierName.trim() || 'A definir / Retirada no CD Serrana Spress',
+        address: carrierAddress.trim() || `${street}, ${number} - ${neighborhood}, ${city}/${state}`,
+        city: city,
+        state: state,
+        phone: carrierPhone.trim(),
+        notes: carrierNotes.trim(),
+      },
       createdAt: new Date().toISOString(),
     };
 
@@ -245,7 +264,7 @@ export const CartAndCheckoutDrawer: React.FC<CartAndCheckoutDrawerProps> = ({
                             <img
                               src={item.selectedColorPhoto || item.product.photos?.[0]}
                               alt={item.product.name}
-                              className="w-14 h-14 object-contain rounded-xl border border-slate-200 bg-white p-1 shrink-0 mix-blend-multiply"
+                              className="w-14 h-14 object-contain rounded-xl border border-slate-200 bg-white p-1 shrink-0"
                             />
                           )}
                           <div>
@@ -508,6 +527,115 @@ export const CartAndCheckoutDrawer: React.FC<CartAndCheckoutDrawerProps> = ({
                       />
                     </div>
                   </div>
+                </div>
+              </div>
+
+              {/* 1. QUADRO: IDENTIFICAÇÃO DA CAIXA PARA A ETIQUETA 100x150 */}
+              <div className="p-4 bg-orange-50/70 rounded-2xl border-2 border-orange-200 space-y-3">
+                <div className="flex items-center gap-2">
+                  <div className="w-7 h-7 rounded-lg bg-[#ff5500] text-white flex items-center justify-center shrink-0">
+                    <Tag className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <span className="text-xs font-black text-slate-900 uppercase tracking-wide block">
+                      Como deseja identificar suas caixas na etiqueta? *
+                    </span>
+                    <span className="text-[11px] text-slate-600 block">
+                      Este texto será impresso em destaque gigante na etiqueta térmica 100x150 colada em cada caixa.
+                    </span>
+                  </div>
+                </div>
+
+                <div>
+                  <input
+                    type="text"
+                    required
+                    placeholder="Ex: LEANDRO MATO GROSSO ou CALÇADOS SILVA - CUIABÁ/MT"
+                    value={boxLabelIdentification}
+                    onChange={(e) => setBoxLabelIdentification(e.target.value.toUpperCase())}
+                    className="w-full bg-white border-2 border-orange-300 focus:border-[#ff5500] px-3.5 py-2.5 rounded-xl text-sm font-mono font-bold text-slate-900 uppercase placeholder:text-slate-400 placeholder:normal-case shadow-2xs"
+                  />
+                  <div className="flex items-center justify-between text-[10px] text-slate-500 mt-1.5 px-0.5">
+                    <span>Exemplo usual dos lojistas: <strong>LEANDRO MATO GROSSO</strong></span>
+                    <span className="text-[#ff5500] font-bold">Impresso em letras garrafais</span>
+                  </div>
+                </div>
+
+                {/* Live Preview on label */}
+                {boxLabelIdentification.trim() && (
+                  <div className="p-2.5 bg-white rounded-xl border border-dashed border-slate-300 text-center">
+                    <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest block mb-0.5">
+                      Prévia da Marcação na Etiqueta 100x150:
+                    </span>
+                    <span className="text-sm font-black font-mono uppercase text-slate-900 border-2 border-slate-900 px-3 py-1 inline-block rounded bg-amber-50/40">
+                      {boxLabelIdentification}
+                    </span>
+                  </div>
+                )}
+              </div>
+
+              {/* 2. QUADRO: TRANSPORTADORA & ENDEREÇO DE DESPACHO */}
+              <div className="p-4 bg-slate-50 rounded-2xl border border-slate-200/80 space-y-3">
+                <span className="text-xs font-bold text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
+                  <Truck className="w-3.5 h-3.5 text-[#ff5500]" />
+                  <span>Transportadora / Endereço de Redespacho</span>
+                </span>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-[11px] font-bold text-slate-700 mb-1">
+                      Nome da Transportadora
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="Ex: Braspress, Carvalima, Rodonaves..."
+                      value={carrierName}
+                      onChange={(e) => setCarrierName(e.target.value)}
+                      className="w-full bg-white border border-slate-200 px-3 py-2 rounded-xl text-xs font-medium text-slate-900"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-[11px] font-bold text-slate-700 mb-1">
+                      Telefone da Transportadora
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="(00) 0000-0000"
+                      value={carrierPhone}
+                      onChange={(e) => setCarrierPhone(e.target.value)}
+                      className="w-full bg-white border border-slate-200 px-3 py-2 rounded-xl text-xs font-mono"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-[11px] font-bold text-slate-700 mb-1">
+                    Endereço de Despacho da Transportadora / Galpão
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="Ex: Galpão da Transportadora em Nova Serrana / BH ou Coleta no CD Serrana Spress"
+                    value={carrierAddress}
+                    onChange={(e) => setCarrierAddress(e.target.value)}
+                    className="w-full bg-white border border-slate-200 px-3 py-2 rounded-xl text-xs"
+                  />
+                  <span className="text-[10px] text-slate-500 mt-1 block">
+                    Caso a transportadora faça a coleta diretamente no CD da Serrana Spress, informe "Coleta no CD".
+                  </span>
+                </div>
+
+                <div>
+                  <label className="block text-[11px] font-bold text-slate-700 mb-1">
+                    Observações de Despacho (Opcional)
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="Ex: Entregar com declaração de conteúdo, redespacho em Cuiabá..."
+                    value={carrierNotes}
+                    onChange={(e) => setCarrierNotes(e.target.value)}
+                    className="w-full bg-white border border-slate-200 px-3 py-2 rounded-xl text-xs"
+                  />
                 </div>
               </div>
 

@@ -1,55 +1,33 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Helper function for ID format
-    function isValidId(id) {
-      return id is string && id.size() > 0 && id.size() <= 128;
-    }
-
     // Connection testing
     match /test/{docId} {
-      allow read: if true;
-      allow write: if false;
+      allow read, write: if true;
     }
 
-    // Products catalog
+    // Products catalog: open read so retailers and visitors see the products
     match /products/{productId} {
-      allow read: if isValidId(productId);
-      allow create, update: if isValidId(productId)
-        && request.resource.data.name is string
-        && request.resource.data.name.size() > 0
-        && request.resource.data.pricePerPair is number
-        && request.resource.data.pricePerBox is number;
-      allow delete: if isValidId(productId);
+      allow read: if true;
+      allow write: if true;
     }
 
     // Manufacturers
     match /manufacturers/{manufacturerId} {
-      allow read: if isValidId(manufacturerId);
-      allow create, update: if isValidId(manufacturerId)
-        && request.resource.data.brandName is string;
-      allow delete: if isValidId(manufacturerId);
+      allow read: if true;
+      allow write: if true;
     }
 
     // Retailers
     match /retailers/{retailerId} {
-      allow read: if isValidId(retailerId);
-      allow create, update: if isValidId(retailerId)
-        && request.resource.data.storeName is string;
-      allow delete: if isValidId(retailerId);
+      allow read: if true;
+      allow write: if true;
     }
 
     // Orders
     match /orders/{orderId} {
-      allow read: if isValidId(orderId);
-      allow create, update: if isValidId(orderId)
-        && request.resource.data.totalAmount is number;
-      allow delete: if isValidId(orderId);
-    }
-
-    // Default deny
-    match /{document=**} {
-      allow read, write: if false;
+      allow read: if true;
+      allow write: if true;
     }
   }
 }

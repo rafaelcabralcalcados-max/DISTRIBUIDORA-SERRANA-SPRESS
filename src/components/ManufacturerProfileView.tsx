@@ -166,7 +166,7 @@ export const ManufacturerProfileView: React.FC<ManufacturerProfileViewProps> = (
                   src={currentDisplayPhotos[activePhotoIndex] || currentDisplayPhotos[0]}
                   alt={activeProduct.name}
                   referrerPolicy="no-referrer"
-                  className="max-h-[360px] max-w-full object-contain mix-blend-multiply transition-all duration-300"
+                  className="max-h-[360px] max-w-full object-contain transition-all duration-300"
                 />
               ) : (
                 <div className="w-full max-w-lg h-72 flex items-center justify-center">
@@ -232,7 +232,7 @@ export const ManufacturerProfileView: React.FC<ManufacturerProfileViewProps> = (
                         : 'border-slate-200 hover:border-slate-400 opacity-75 hover:opacity-100'
                     }`}
                   >
-                    <img src={photo} alt="" className="w-full h-full object-contain mix-blend-multiply" />
+                    <img src={photo} alt="" className="w-full h-full object-contain" />
                   </button>
                 ))}
               </div>
@@ -354,7 +354,7 @@ export const ManufacturerProfileView: React.FC<ManufacturerProfileViewProps> = (
                     <img
                       src={currentDisplayPhotos[0]}
                       alt={activeColor.name}
-                      className="w-10 h-10 object-contain rounded-xl border border-slate-200 bg-white p-0.5 mix-blend-multiply"
+                      className="w-10 h-10 object-contain rounded-xl border border-slate-200 bg-white p-0.5"
                     />
                   )}
                 </div>
@@ -587,7 +587,7 @@ export const ManufacturerProfileView: React.FC<ManufacturerProfileViewProps> = (
                 >
                   <div className="h-40 bg-white border border-slate-100 rounded-xl flex items-center justify-center p-2 mb-3">
                     {prod.photos && prod.photos[0] ? (
-                      <img src={prod.photos[0]} alt={prod.name} className="max-h-full max-w-full object-contain mix-blend-multiply" />
+                      <img src={prod.photos[0]} alt={prod.name} className="max-h-full max-w-full object-contain" />
                     ) : (
                       <ShoeIllustration category={prod.category} className="w-full h-full" />
                     )}

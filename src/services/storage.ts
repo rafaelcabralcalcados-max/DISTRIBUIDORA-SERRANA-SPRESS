@@ -84,11 +84,33 @@ class StorageService {
     });
 
     try {
-      // 1. Live Cloud Firestore Sync: Products
+      // Immediate initial fetch to guarantee instant display on first load
+      getDocs(collection(db, 'products')).then((snapshot) => {
+        if (snapshot.docs.length > 0) {
+          this._products = snapshot.docs.map(docSnap => {
+            const data = docSnap.data() as ProductBox;
+            const sanitized: ProductBox = {
+              ...data,
+              manufacturerName: 'Distribuidora Serrana Spress'
+            };
+            if (data.manufacturerName !== 'Distribuidora Serrana Spress') {
+              setDoc(doc(db, 'products', docSnap.id), cleanForFirestore(sanitized)).catch(() => {});
+            }
+            return sanitized;
+          });
+          window.dispatchEvent(new Event('serron_storage_update'));
+        }
+      }).catch(err => console.warn('Initial products fetch:', err));
+
+      // 1. Live Cloud Firestore Sync: Products (strictly enforce masked name Distribuidora Serrana Spress)
       onSnapshot(collection(db, 'products'), (snapshot) => {
         const remoteProducts: ProductBox[] = [];
         snapshot.forEach((docSnap) => {
-          remoteProducts.push(docSnap.data() as ProductBox);
+          const data = docSnap.data() as ProductBox;
+          remoteProducts.push({
+            ...data,
+            manufacturerName: 'Distribuidora Serrana Spress'
+          });
         });
         this._products = remoteProducts;
         window.dispatchEvent(new Event('serron_storage_update'));
@@ -140,35 +162,48 @@ class StorageService {
   // PRODUCTS (EXCLUSIVELY CLOUD FIRESTORE)
   // ==========================================
   getProducts(): ProductBox[] {
-    return this._products;
+    return this._products.map(p => ({
+      ...p,
+      manufacturerName: 'Distribuidora Serrana Spress'
+    }));
   }
 
   addProduct(product: ProductBox): ProductBox {
+    const sanitizedProduct: ProductBox = {
+      ...product,
+      manufacturerName: 'Distribuidora Serrana Spress'
+    };
+
     // Optimistic in-memory update
-    this._products = [product, ...this._products.filter(p => p.id !== product.id)];
+    this._products = [sanitizedProduct, ...this._products.filter(p => p.id !== sanitizedProduct.id)];
     window.dispatchEvent(new Event('serron_storage_update'));
 
     // Persistent Cloud Firestore write
     try {
-      setDoc(doc(db, 'products', product.id), cleanForFirestore(product)).catch((err) => {
+      setDoc(doc(db, 'products', sanitizedProduct.id), cleanForFirestore(sanitizedProduct)).catch((err) => {
         console.error('Error writing product to Firestore:', err);
       });
     } catch (e) {
       console.error('Firestore addProduct exception:', e);
     }
 
-    return product;
+    return sanitizedProduct;
   }
 
   updateProduct(product: ProductBox): void {
-    const index = this._products.findIndex(p => p.id === product.id);
+    const sanitizedProduct: ProductBox = {
+      ...product,
+      manufacturerName: 'Distribuidora Serrana Spress'
+    };
+
+    const index = this._products.findIndex(p => p.id === sanitizedProduct.id);
     if (index !== -1) {
-      this._products[index] = product;
+      this._products[index] = sanitizedProduct;
       window.dispatchEvent(new Event('serron_storage_update'));
     }
 
     try {
-      setDoc(doc(db, 'products', product.id), cleanForFirestore(product)).catch((err) => {
+      setDoc(doc(db, 'products', sanitizedProduct.id), cleanForFirestore(sanitizedProduct)).catch((err) => {
         console.error('Error updating product in Firestore:', err);
       });
     } catch (e) {
@@ -440,6 +475,111 @@ class StorageService {
       // ignore
     }
     this.setCurrentUser(null);
+  }
+
+  // ==========================================
+  // ACCOUNT DELETION VALIDATION & EXECUTION
+  // ==========================================
+  canDeleteAccount(userId: string, role: 'manufacturer' | 'retailer'): {
+    allowed: boolean;
+    blockingOrders: Order[];
+    reason?: string;
+  } {
+    const allOrders = this.getOrders();
+
+    if (role === 'manufacturer') {
+      // Blocking if the manufacturer has items in any order that is NOT yet delivered
+      const blockingOrders = allOrders.filter((ord) => {
+        const hasMfgItems = ord.items.some((item) => item.manufacturerId === userId);
+        const isIncomplete = ord.orderStatus !== 'entregue';
+        return hasMfgItems && isIncomplete;
+      });
+
+      return {
+        allowed: blockingOrders.length === 0,
+        blockingOrders,
+        reason:
+          blockingOrders.length > 0
+            ? `Você possui ${blockingOrders.length} pedido(s) pendente(s) para entregar ao Centro de Distribuição ou em trânsito. Para excluir a conta, todos os pedidos devem estar com status 'entregue'.`
+            : undefined,
+      };
+    } else {
+      // Retailer: Blocking if retailer has any order that is NOT yet delivered
+      const retailer = this._retailers.find((r) => r.id === userId);
+      const blockingOrders = allOrders.filter((ord) => {
+        const isThisRetailer =
+          ord.retailerId === userId || (retailer?.cnpj && ord.retailerCnpj === retailer.cnpj);
+        const isIncomplete = ord.orderStatus !== 'entregue';
+        return isThisRetailer && isIncomplete;
+      });
+
+      return {
+        allowed: blockingOrders.length === 0,
+        blockingOrders,
+        reason:
+          blockingOrders.length > 0
+            ? `Você possui ${blockingOrders.length} compra(s) com status em andamento. Para excluir a conta, todas as compras devem estar finalizadas e entregues.`
+            : undefined,
+      };
+    }
+  }
+
+  async deleteAccountAsync(
+    userId: string,
+    role: 'manufacturer' | 'retailer'
+  ): Promise<{ success: boolean; error?: string }> {
+    const check = this.canDeleteAccount(userId, role);
+    if (!check.allowed) {
+      return {
+        success: false,
+        error: check.reason || 'Não é possível excluir a conta enquanto houver pedidos pendentes.',
+      };
+    }
+
+    try {
+      if (role === 'manufacturer') {
+        // 1. Delete all manufacturer products from Firestore & local state
+        const mfgProducts = this._products.filter((p) => p.manufacturerId === userId);
+        for (const prod of mfgProducts) {
+          try {
+            await deleteDoc(doc(db, 'products', prod.id));
+          } catch (err) {
+            console.warn('Error deleting product from Firestore:', prod.id, err);
+          }
+        }
+        this._products = this._products.filter((p) => p.manufacturerId !== userId);
+
+        // 2. Delete manufacturer profile document
+        await deleteDoc(doc(db, 'manufacturers', userId));
+        this._manufacturers = this._manufacturers.filter((m) => m.id !== userId);
+      } else {
+        // Retailer: delete retailer profile document
+        await deleteDoc(doc(db, 'retailers', userId));
+        this._retailers = this._retailers.filter((r) => r.id !== userId);
+      }
+
+      // 3. Try deleting Firebase Auth user if active
+      if (auth.currentUser) {
+        try {
+          await auth.currentUser.delete();
+        } catch {
+          // If requires recent login or not logged via Firebase auth, silently ignore
+        }
+      }
+
+      // 4. Clear current session
+      await this.logoutUserAsync();
+      window.dispatchEvent(new Event('serron_storage_update'));
+      window.dispatchEvent(new Event('serron_auth_update'));
+
+      return { success: true };
+    } catch (err: any) {
+      console.error('Error during account deletion:', err);
+      return {
+        success: false,
+        error: err?.message || 'Falha ao excluir a conta no banco de dados.',
+      };
+    }
   }
 
   syncLocalToCloud(): void {

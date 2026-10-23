@@ -27,22 +27,29 @@ import {
   MapPin,
   Search,
   Loader2,
-  Check
+  Check,
+  ShieldAlert,
+  Tag,
+  Printer
 } from 'lucide-react';
+import { DeleteAccountModal } from './DeleteAccountModal';
+import { LabelAndManifestModal } from './LabelAndManifestModal';
 
 interface ManufacturerDashboardProps {
   manufacturer: Manufacturer;
   onRefresh: () => void;
+  onAccountDeleted?: () => void;
 }
-
-
 
 export const ManufacturerDashboard: React.FC<ManufacturerDashboardProps> = ({
   manufacturer,
   onRefresh,
+  onAccountDeleted,
 }) => {
   const [activeTab, setActiveTab] = useState<'catalog' | 'new_product' | 'orders' | 'profile'>('catalog');
   const [editingProductId, setEditingProductId] = useState<string | null>(null);
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [selectedOrderForLabels, setSelectedOrderForLabels] = useState<Order | null>(null);
 
   // Factory profile & address state
   const [profileBrandName, setProfileBrandName] = useState(manufacturer.brandName);
@@ -359,7 +366,7 @@ export const ManufacturerDashboard: React.FC<ManufacturerDashboardProps> = ({
     const productPayload: ProductBox = {
       id: editingProductId || `box-${Date.now()}`,
       manufacturerId: manufacturer.id,
-      manufacturerName: manufacturer.brandName,
+      manufacturerName: 'Distribuidora Serrana Spress',
       manufacturerCity: `${manufacturer.city} - ${manufacturer.state}`,
       name: name.trim(),
       referenceCode: referenceCode.trim().toUpperCase(),
@@ -615,7 +622,7 @@ export const ManufacturerDashboard: React.FC<ManufacturerDashboardProps> = ({
                 >
                   <div className="h-52 bg-white p-4 flex items-center justify-center relative border-b border-slate-100">
                     {prod.photos && prod.photos[0] ? (
-                      <img src={prod.photos[0]} alt={prod.name} className="h-full object-contain mix-blend-multiply" />
+                      <img src={prod.photos[0]} alt={prod.name} className="h-full object-contain" />
                     ) : (
                       <ShoeIllustration category={prod.category} className="h-full" />
                     )}
@@ -963,7 +970,7 @@ export const ManufacturerDashboard: React.FC<ManufacturerDashboardProps> = ({
                                   <img
                                     src={img}
                                     alt=""
-                                    className="w-full h-full object-contain mix-blend-multiply"
+                                    className="w-full h-full object-contain"
                                   />
                                   {imgIdx === 0 && (
                                     <span className="absolute top-0.5 left-0.5 bg-[#ff5500] text-white text-[8px] font-bold px-1 rounded">
@@ -1163,6 +1170,24 @@ export const ManufacturerDashboard: React.FC<ManufacturerDashboardProps> = ({
                         <div className="text-[11px] text-slate-500 mt-0.5">
                           Data da Compra: {new Date(ord.createdAt).toLocaleDateString('pt-BR')} · Intermediação Distribuidora Serrana Spress
                         </div>
+
+                        {/* Identification for box */}
+                        <div className="mt-1.5 flex flex-wrap items-center gap-2">
+                          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-amber-50 border border-amber-300 rounded-lg text-xs font-black font-mono text-black uppercase">
+                            <Tag className="w-3.5 h-3.5 text-[#ff5500]" />
+                            <span>Identificação para a Caixa: {ord.boxLabelIdentification || `${ord.deliveryAddress.city} - ${ord.deliveryAddress.state}`}</span>
+                          </span>
+
+                          <button
+                            type="button"
+                            onClick={() => setSelectedOrderForLabels(ord)}
+                            className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-white hover:bg-orange-50 border border-slate-300 hover:border-[#ff5500] text-slate-800 hover:text-[#ff5500] text-xs font-bold rounded-lg transition-colors cursor-pointer shadow-2xs"
+                            title="Gerar etiquetas térmicas 100x150 para colar nas caixas fechadas"
+                          >
+                            <Printer className="w-3.5 h-3.5 text-[#ff5500]" />
+                            <span>Imprimir Etiquetas das Caixas</span>
+                          </button>
+                        </div>
                       </div>
 
                       {/* Financial breakdown for manufacturer */}
@@ -1194,7 +1219,7 @@ export const ManufacturerDashboard: React.FC<ManufacturerDashboardProps> = ({
                               <img
                                 src={item.photo}
                                 alt={item.productName}
-                                className="w-12 h-12 object-contain rounded-xl border border-slate-200 bg-white p-1 shrink-0 mix-blend-multiply"
+                                className="w-12 h-12 object-contain rounded-xl border border-slate-200 bg-white p-1 shrink-0"
                               />
                             )}
                             <div>
@@ -1519,7 +1544,53 @@ export const ManufacturerDashboard: React.FC<ManufacturerDashboardProps> = ({
               </button>
             </div>
           </form>
+
+          {/* Zona de Perigo: Exclusão de Conta */}
+          <div className="p-6 bg-red-50/40 rounded-3xl border border-red-200/80 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mt-6">
+            <div className="space-y-1">
+              <div className="flex items-center gap-2 text-red-600 font-bold text-xs uppercase tracking-wider">
+                <ShieldAlert className="w-4 h-4" />
+                <span>Zona de Perigo</span>
+              </div>
+              <h4 className="text-sm font-extrabold text-slate-900">
+                Excluir Conta de Fabricante
+              </h4>
+              <p className="text-xs text-slate-500 max-w-xl">
+                Encerre sua conta e remova seus dados e catálogo da plataforma. A exclusão só é autorizada se você não tiver pedidos para entregar ao Centro de Distribuição ou entregas pendentes.
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => setIsDeleteModalOpen(true)}
+              className="px-4 py-2.5 bg-white hover:bg-red-50 text-red-600 hover:text-red-700 font-bold text-xs rounded-xl border border-red-200 transition-colors cursor-pointer shrink-0 flex items-center gap-2 shadow-xs"
+            >
+              <Trash2 className="w-4 h-4 text-red-600" />
+              <span>Excluir Minha Conta</span>
+            </button>
+          </div>
         </div>
+      )}
+
+      {/* Account Deletion Modal */}
+      <DeleteAccountModal
+        isOpen={isDeleteModalOpen}
+        onClose={() => setIsDeleteModalOpen(false)}
+        user={manufacturer}
+        onAccountDeleted={() => {
+          setIsDeleteModalOpen(false);
+          if (onAccountDeleted) {
+            onAccountDeleted();
+          }
+        }}
+      />
+
+      {/* 100x150 Thermal Labels & Manifest Modal */}
+      {selectedOrderForLabels && (
+        <LabelAndManifestModal
+          isOpen={!!selectedOrderForLabels}
+          onClose={() => setSelectedOrderForLabels(null)}
+          order={selectedOrderForLabels}
+        />
       )}
     </div>
   );

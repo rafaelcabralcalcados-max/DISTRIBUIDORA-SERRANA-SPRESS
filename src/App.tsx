@@ -32,6 +32,7 @@ export default function App() {
   // Sync storage events & boot test Firestore connection
   useEffect(() => {
     testConnection();
+    setProducts(storageService.getProducts());
 
     const handleStorageUpdate = () => {
       setProducts(storageService.getProducts());
@@ -238,6 +239,11 @@ export default function App() {
           <ManufacturerDashboard
             manufacturer={currentUser as Manufacturer}
             onRefresh={() => setProducts(storageService.getProducts())}
+            onAccountDeleted={() => {
+              setCurrentUser(null);
+              setProducts(storageService.getProducts());
+              setActiveView('landing');
+            }}
           />
         )}
 
@@ -245,6 +251,14 @@ export default function App() {
           <RetailerDashboard
             retailer={currentUser as Retailer}
             onBrowseCatalog={() => setActiveView('landing')}
+            onAccountDeleted={() => {
+              setCurrentUser(null);
+              setProducts(storageService.getProducts());
+              setActiveView('landing');
+            }}
+            onUpdateRetailer={(updated) => {
+              setCurrentUser(updated);
+            }}
           />
         )}
 

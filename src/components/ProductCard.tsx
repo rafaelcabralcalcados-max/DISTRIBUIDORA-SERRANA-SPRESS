@@ -42,7 +42,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({
             src={primaryPhoto}
             alt={product.name}
             referrerPolicy="no-referrer"
-            className="w-full h-full object-contain group-hover:scale-105 transition-transform duration-300 mix-blend-multiply"
+            className="w-full h-full object-contain group-hover:scale-105 transition-transform duration-300"
           />
         ) : (
           <div className="w-full h-full flex items-center justify-center">

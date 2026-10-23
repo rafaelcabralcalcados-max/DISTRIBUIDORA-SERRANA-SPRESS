@@ -14,8 +14,12 @@ import {
   ChevronDown,
   MapPin,
   Database,
-  CloudUpload
+  CloudUpload,
+  Tag,
+  FileText,
+  Printer
 } from 'lucide-react';
+import { LabelAndManifestModal } from './LabelAndManifestModal';
 
 interface AdminPanelProps {
   onRefresh: () => void;
@@ -23,6 +27,7 @@ interface AdminPanelProps {
 
 export const AdminPanel: React.FC<AdminPanelProps> = ({ onRefresh }) => {
   const [activeTab, setActiveTab] = useState<'logistics' | 'audit' | 'entities'>('logistics');
+  const [selectedOrderForLabels, setSelectedOrderForLabels] = useState<Order | null>(null);
 
   const handleSyncToFirestore = () => {
     storageService.syncLocalToCloud();
@@ -251,13 +256,52 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onRefresh }) => {
                         <div className="text-[11px] text-slate-500">
                           Entrega: {order.deliveryAddress.street}, {order.deliveryAddress.number} - {order.deliveryAddress.city}/{order.deliveryAddress.state} (CEP: {order.deliveryAddress.zipCode})
                         </div>
+
+                        {/* Box label identification & Carrier banner */}
+                        <div className="mt-2 flex flex-wrap items-center gap-2">
+                          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-amber-50 border border-amber-300 rounded-lg text-xs font-black font-mono text-black uppercase">
+                            <Tag className="w-3.5 h-3.5 text-[#ff5500]" />
+                            <span>Etiqueta: {order.boxLabelIdentification || `${order.retailerName} - ${order.deliveryAddress.city}/${order.deliveryAddress.state}`}</span>
+                          </span>
+
+                          {order.carrierInfo?.name && (
+                            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-blue-50 border border-blue-200 rounded-lg text-xs font-semibold text-blue-900">
+                              <Truck className="w-3.5 h-3.5 text-blue-600" />
+                              <span>Transp: {order.carrierInfo.name}</span>
+                            </span>
+                          )}
+                        </div>
                       </div>
 
-                      <div className="text-right">
-                        <span className="text-[11px] text-slate-500 block font-medium">Valor Total da Venda</span>
-                        <span className="text-lg font-extrabold text-slate-900 font-mono tabular-nums">
-                          R$ {order.totalFinalAmount.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                        </span>
+                      <div className="text-right flex flex-col items-end gap-2">
+                        <div>
+                          <span className="text-[11px] text-slate-500 block font-medium">Valor Total da Venda</span>
+                          <span className="text-lg font-extrabold text-slate-900 font-mono tabular-nums">
+                            R$ {order.totalFinalAmount.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                          </span>
+                        </div>
+
+                        {/* Print Buttons for CD operations */}
+                        <div className="flex items-center gap-1.5 mt-1">
+                          <button
+                            type="button"
+                            onClick={() => setSelectedOrderForLabels(order)}
+                            className="px-3 py-1.5 bg-slate-900 hover:bg-black text-white rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer shadow-2xs"
+                            title="Gerar etiquetas térmicas 100x150 mm para colar nas caixas"
+                          >
+                            <Tag className="w-3.5 h-3.5 text-[#ff5500]" />
+                            <span>Etiquetas 100x150</span>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setSelectedOrderForLabels(order)}
+                            className="px-3 py-1.5 bg-orange-50 hover:bg-orange-100 text-[#ff5500] border border-orange-200 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer shadow-2xs"
+                            title="Gerar Romaneio A4 de separação com total de cada fornecedor"
+                          >
+                            <FileText className="w-3.5 h-3.5" />
+                            <span>Romaneio A4</span>
+                          </button>
+                        </div>
                       </div>
                     </div>
 
@@ -273,7 +317,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onRefresh }) => {
                               <img
                                 src={item.photo}
                                 alt={item.productName}
-                                className="w-10 h-10 object-contain rounded-lg border border-slate-200 bg-white p-0.5 shrink-0 mix-blend-multiply"
+                                className="w-10 h-10 object-contain rounded-lg border border-slate-200 bg-white p-0.5 shrink-0"
                               />
                             )}
                             <div>
@@ -661,6 +705,15 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onRefresh }) => {
             )}
           </div>
         </div>
+      )}
+
+      {/* 100x150 Thermal Labels & A4 Supplier Manifest Modal */}
+      {selectedOrderForLabels && (
+        <LabelAndManifestModal
+          isOpen={!!selectedOrderForLabels}
+          onClose={() => setSelectedOrderForLabels(null)}
+          order={selectedOrderForLabels}
+        />
       )}
     </div>
   );
