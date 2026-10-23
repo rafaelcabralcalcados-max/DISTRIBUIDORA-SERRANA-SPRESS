@@ -17,6 +17,7 @@ import {
   Trash2,
   Upload,
   AlertCircle,
+  AlertTriangle,
   Lock,
   Palette,
   Image as ImageIcon,
@@ -128,6 +129,22 @@ export const ManufacturerDashboard: React.FC<ManufacturerDashboardProps> = ({
 
   const totalCommissionDeducted = totalGrossSold * (manufacturer.commissionRateAccepted / 100);
   const totalNetReceivable = totalGrossSold - totalCommissionDeducted;
+
+  // Low stock calculation: threshold <= 2 boxes triggers alert
+  const LOW_STOCK_THRESHOLD = 2;
+  const lowStockItems = products.map(prod => {
+    const totalStock = prod.stockBoxes ?? prod.colors?.reduce((sum, c) => sum + (Number(c.stockBoxes) || 0), 0) ?? 0;
+    const lowColors = (prod.colors || []).filter(c => (Number(c.stockBoxes) || 0) <= LOW_STOCK_THRESHOLD);
+    const isTotalLow = totalStock <= LOW_STOCK_THRESHOLD;
+    const isLow = isTotalLow || lowColors.length > 0;
+    return {
+      product: prod,
+      totalStock,
+      lowColors,
+      isTotalLow,
+      isLow,
+    };
+  }).filter(item => item.isLow);
 
   // Add new row to color table
   const handleAddColorRow = () => {
@@ -499,7 +516,7 @@ export const ManufacturerDashboard: React.FC<ManufacturerDashboardProps> = ({
           </div>
 
           {/* Quick KPI Strip */}
-          <div className="flex items-center gap-6 border-t md:border-t-0 md:border-l border-slate-100 pt-4 md:pt-0 md:pl-6">
+          <div className="flex flex-wrap items-center gap-5 border-t md:border-t-0 md:border-l border-slate-100 pt-4 md:pt-0 md:pl-6">
             <div>
               <span className="text-xs text-slate-500 block font-medium">Vendas Brutas</span>
               <span className="text-lg font-extrabold text-slate-900 font-mono tabular-nums">
@@ -513,7 +530,21 @@ export const ManufacturerDashboard: React.FC<ManufacturerDashboardProps> = ({
               </span>
             </div>
             <div>
-              <span className="text-xs text-slate-500 block font-medium">Taxa de Comissão</span>
+              <span className="text-xs text-slate-500 block font-medium">Estoque Baixo (≤ 2 cx)</span>
+              {lowStockItems.length > 0 ? (
+                <span className="inline-flex items-center gap-1.5 text-xs font-extrabold text-rose-700 bg-rose-50 px-2.5 py-1 rounded-lg border border-rose-200 font-mono">
+                  <AlertTriangle className="w-3.5 h-3.5 text-rose-600 animate-pulse" />
+                  {lowStockItems.length} {lowStockItems.length === 1 ? 'modelo crítico' : 'modelos críticos'}
+                </span>
+              ) : (
+                <span className="inline-flex items-center gap-1.5 text-xs font-bold text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-lg border border-emerald-200 font-mono">
+                  <CheckCircle className="w-3.5 h-3.5 text-emerald-600" />
+                  Regular (&gt; 2 cx)
+                </span>
+              )}
+            </div>
+            <div>
+              <span className="text-xs text-slate-500 block font-medium">Comissão</span>
               <span className="text-xs font-bold text-[#ff5500] bg-orange-50 px-2.5 py-1 rounded-lg border border-orange-200 font-mono">
                 {manufacturer.commissionRateAccepted}%
               </span>
@@ -542,6 +573,112 @@ export const ManufacturerDashboard: React.FC<ManufacturerDashboardProps> = ({
         </div>
       </div>
 
+      {/* Persistent Low Stock Alert Banner (Visible whenever any product or color is <= 2 boxes) */}
+      {lowStockItems.length > 0 && (
+        <div className="mb-8 bg-gradient-to-r from-amber-50 via-rose-50/70 to-orange-50 border-2 border-rose-300/90 rounded-3xl p-5 sm:p-6 shadow-sm">
+          <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
+            <div className="flex items-start gap-3.5">
+              <div className="w-10 h-10 rounded-2xl bg-rose-500/15 border border-rose-300 text-rose-700 flex items-center justify-center shrink-0 shadow-2xs">
+                <AlertTriangle className="w-5 h-5 text-rose-600 animate-pulse" />
+              </div>
+              <div>
+                <div className="flex flex-wrap items-center gap-2">
+                  <h3 className="text-base font-extrabold text-slate-900 font-display">
+                    Alerta de Estoque Baixo (2 caixas ou menos restantes)
+                  </h3>
+                  <span className="text-[11px] font-extrabold bg-rose-600 text-white px-2.5 py-0.5 rounded-full shadow-2xs font-mono">
+                    {lowStockItems.length} {lowStockItems.length === 1 ? 'modelo crítico' : 'modelos críticos'}
+                  </span>
+                </div>
+                <p className="text-xs text-slate-600 mt-1 max-w-2xl leading-relaxed">
+                  Atenção: Os seguintes modelos ou grades de cores da sua fábrica atingiram <strong>2 caixas ou menos</strong> (risco iminente de esgotamento). Faça a reposição de estoque para manter as vendas ativas no marketplace:
+                </p>
+              </div>
+            </div>
+
+            <button
+              onClick={() => setActiveTab('catalog')}
+              className="self-start sm:self-auto px-3.5 py-1.5 text-xs font-bold text-rose-700 bg-white/95 hover:bg-white border border-rose-300 rounded-xl transition-colors shadow-2xs cursor-pointer whitespace-nowrap"
+            >
+              Ver no Catálogo
+            </button>
+          </div>
+
+          {/* List of low-stock products cards */}
+          <div className="mt-4 pt-4 border-t border-rose-200/70 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+            {lowStockItems.map(({ product: p, totalStock, lowColors }) => (
+              <div
+                key={p.id}
+                className="bg-white/95 rounded-2xl p-3.5 border border-rose-200 shadow-2xs flex flex-col justify-between gap-3 hover:border-rose-400 transition-colors"
+              >
+                <div className="flex items-start gap-3">
+                  <div className="w-14 h-14 bg-slate-50 rounded-xl border border-slate-200 p-1 flex items-center justify-center shrink-0 overflow-hidden">
+                    {p.photos && p.photos[0] ? (
+                      <img src={p.photos[0]} alt={p.name} className="w-full h-full object-contain" />
+                    ) : (
+                      <Package className="w-6 h-6 text-slate-400" />
+                    )}
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <span className="text-[10px] font-mono font-bold text-slate-500 uppercase">
+                      Ref: {p.referenceCode}
+                    </span>
+                    <h4 className="text-xs font-bold text-slate-900 truncate" title={p.name}>
+                      {p.name}
+                    </h4>
+                    <div className="mt-1 flex items-center gap-1.5">
+                      <span className={`inline-flex items-center gap-1 text-[10px] font-mono font-extrabold px-2 py-0.5 rounded-md ${
+                        totalStock <= 0
+                          ? 'bg-red-600 text-white'
+                          : 'bg-rose-100 text-rose-900 border border-rose-300'
+                      }`}>
+                        <AlertTriangle className="w-2.5 h-2.5" />
+                        {totalStock <= 0 ? 'Esgotado (0 cx)' : `${totalStock} ${totalStock === 1 ? 'caixa' : 'caixas'} no total`}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Specific colors affected */}
+                {lowColors.length > 0 && (
+                  <div className="space-y-1 bg-rose-50/70 p-2 rounded-xl border border-rose-200/60">
+                    <span className="text-[10px] font-bold text-rose-800 block">
+                      Cores com estoque ≤ 2 caixas:
+                    </span>
+                    <div className="flex flex-wrap gap-1">
+                      {lowColors.map(c => (
+                        <span
+                          key={c.id}
+                          className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-bold bg-white text-rose-950 border border-rose-300 shadow-2xs font-mono"
+                        >
+                          {c.hexColor && (
+                            <span
+                              className="w-2 h-2 rounded-full border border-slate-300 shrink-0"
+                              style={{ backgroundColor: c.hexColor }}
+                            />
+                          )}
+                          <span>{c.name}</span>
+                          <span className="text-rose-600 font-extrabold">({c.stockBoxes ?? 0} cx)</span>
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                <button
+                  type="button"
+                  onClick={() => handleStartEdit(p)}
+                  className="w-full mt-1 py-1.5 px-3 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-xs font-bold transition-all shadow-2xs flex items-center justify-center gap-1.5 cursor-pointer"
+                >
+                  <Edit3 className="w-3.5 h-3.5" />
+                  <span>Repor Estoque / Editar Modelo</span>
+                </button>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* Navigation Tabs */}
       <div className="flex items-center gap-2 border-b border-slate-200 pb-4 mb-6 overflow-x-auto">
         <button
@@ -554,6 +691,14 @@ export const ManufacturerDashboard: React.FC<ManufacturerDashboardProps> = ({
         >
           <Package className="w-4 h-4" />
           <span>Meu Catálogo ({products.length})</span>
+          {lowStockItems.length > 0 && (
+            <span
+              className="px-1.5 py-0.2 text-[10px] font-extrabold bg-rose-600 text-white rounded-full shadow-2xs font-mono"
+              title={`${lowStockItems.length} produto(s) com estoque ≤ 2 caixas`}
+            >
+              {lowStockItems.length}
+            </span>
+          )}
         </button>
 
         <button
@@ -615,116 +760,154 @@ export const ManufacturerDashboard: React.FC<ManufacturerDashboardProps> = ({
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {products.map((prod) => (
-                <div
-                  key={prod.id}
-                  className="bg-white rounded-3xl overflow-hidden border border-slate-200/90 shadow-xs flex flex-col justify-between"
-                >
-                  <div className="h-52 bg-white p-4 flex items-center justify-center relative border-b border-slate-100">
-                    {prod.photos && prod.photos[0] ? (
-                      <img src={prod.photos[0]} alt={prod.name} className="h-full object-contain" />
-                    ) : (
-                      <ShoeIllustration category={prod.category} className="h-full" />
-                    )}
-                    <span className="absolute top-3 left-3 text-[11px] font-mono font-semibold text-slate-600 bg-white px-2.5 py-0.5 rounded-full border border-slate-200 shadow-2xs">
-                      Ref: {prod.referenceCode}
-                    </span>
-                    <div className="absolute top-3 right-3 flex items-center gap-1.5">
-                      <button
-                        onClick={() => handleStartEdit(prod)}
-                        className="p-1.5 bg-white hover:bg-orange-50 text-slate-500 hover:text-[#ff5500] rounded-lg border border-slate-200 transition-colors shadow-2xs cursor-pointer"
-                        title="Editar modelo, cores e fotos"
-                      >
-                        <Edit3 className="w-3.5 h-3.5" />
-                      </button>
-                      <button
-                        onClick={() => handleDeleteProduct(prod.id)}
-                        className="p-1.5 bg-white hover:bg-red-50 text-slate-400 hover:text-red-600 rounded-lg border border-slate-200 transition-colors shadow-2xs cursor-pointer"
-                        title="Excluir produto"
-                      >
-                        <Trash2 className="w-3.5 h-3.5" />
-                      </button>
-                    </div>
-                  </div>
+              {products.map((prod) => {
+                const prodTotalStock = prod.stockBoxes ?? prod.colors?.reduce((s, c) => s + (Number(c.stockBoxes) || 0), 0) ?? 0;
+                const prodLowColors = (prod.colors || []).filter(c => (Number(c.stockBoxes) || 0) <= LOW_STOCK_THRESHOLD);
+                const isProdLow = prodTotalStock <= LOW_STOCK_THRESHOLD || prodLowColors.length > 0;
 
-                  <div className="p-5 flex-1 flex flex-col justify-between">
-                    <div>
-                      <div className="flex items-center justify-between">
-                        <span className="text-[10px] uppercase font-bold text-[#ff5500] tracking-wider">
-                          {prod.category}
+                return (
+                  <div
+                    key={prod.id}
+                    className={`bg-white rounded-3xl overflow-hidden border shadow-xs flex flex-col justify-between transition-all ${
+                      isProdLow
+                        ? 'border-rose-300 ring-2 ring-rose-100'
+                        : 'border-slate-200/90'
+                    }`}
+                  >
+                    <div className="h-52 bg-white p-4 flex items-center justify-center relative border-b border-slate-100">
+                      {prod.photos && prod.photos[0] ? (
+                        <img src={prod.photos[0]} alt={prod.name} className="h-full object-contain" />
+                      ) : (
+                        <ShoeIllustration category={prod.category} className="h-full" />
+                      )}
+                      <span className="absolute top-3 left-3 text-[11px] font-mono font-semibold text-slate-600 bg-white px-2.5 py-0.5 rounded-full border border-slate-200 shadow-2xs">
+                        Ref: {prod.referenceCode}
+                      </span>
+                      {isProdLow && (
+                        <span className="absolute bottom-3 left-3 flex items-center gap-1 text-[10px] font-extrabold text-rose-800 bg-rose-50/95 px-2.5 py-0.5 rounded-full border border-rose-300 shadow-2xs backdrop-blur-xs font-mono">
+                          <AlertTriangle className="w-3 h-3 text-rose-600 shrink-0" />
+                          <span>{prodTotalStock <= LOW_STOCK_THRESHOLD ? `Estoque Baixo (${prodTotalStock} cx)` : 'Cores Críticas (≤ 2 cx)'}</span>
                         </span>
-                        <span className="text-[11px] font-mono font-medium text-slate-500">
-                          {prod.photos?.length || 0} fotos
-                        </span>
-                      </div>
-                      <h3 className="text-base font-bold text-slate-900 mt-0.5">{prod.name}</h3>
-
-                      {/* Display Colors Preview on Card */}
-                      {prod.colors && prod.colors.length > 0 ? (
-                        <div className="mt-2.5 space-y-1">
-                          <div className="flex items-center gap-1 text-[11px] font-bold text-slate-700">
-                            <Palette className="w-3 h-3 text-[#ff5500]" />
-                            <span>{prod.colors.length} {prod.colors.length === 1 ? 'Cor Disponível' : 'Cores Disponíveis'}:</span>
-                          </div>
-                          <div className="flex flex-wrap gap-1">
-                            {prod.colors.map((c) => (
-                              <span
-                                key={c.id}
-                                className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-medium bg-slate-100 text-slate-800 border border-slate-200"
-                              >
-                                {c.hexColor && (
-                                  <span
-                                    className="w-2 h-2 rounded-full border border-slate-300 shrink-0"
-                                    style={{ backgroundColor: c.hexColor }}
-                                  />
-                                )}
-                                <span>{c.name}</span>
-                                <span className="text-orange-700 bg-orange-50 font-mono text-[9px] font-bold px-1 rounded border border-orange-200/60">
-                                  {c.stockBoxes !== undefined ? `${c.stockBoxes} cx` : `${c.images.length} f`}
-                                </span>
-                              </span>
-                            ))}
-                          </div>
-                        </div>
-                      ) : null}
-
-                      <div className="mt-3 p-3 bg-slate-50 rounded-xl border border-slate-100 space-y-1.5 text-xs">
-                        <div className="flex items-center justify-between text-slate-700">
-                          <span className="flex items-center gap-1 font-bold text-slate-900">
-                            <Layers className="w-3.5 h-3.5 text-[#ff5500]" />
-                            {prod.pairsPerBox} pares por caixa
-                          </span>
-                          <span className="font-mono font-semibold text-slate-600">
-                            R$ {prod.pricePerPair.toFixed(2)}/par
-                          </span>
-                        </div>
-                        <div className="text-[11px] text-slate-500 font-mono">
-                          Grade: {prod.sizesDistribution.map(s => `${s.size} (${s.quantity})`).join(', ')}
-                        </div>
+                      )}
+                      <div className="absolute top-3 right-3 flex items-center gap-1.5">
+                        <button
+                          onClick={() => handleStartEdit(prod)}
+                          className="p-1.5 bg-white hover:bg-orange-50 text-slate-500 hover:text-[#ff5500] rounded-lg border border-slate-200 transition-colors shadow-2xs cursor-pointer"
+                          title="Editar modelo, cores e fotos"
+                        >
+                          <Edit3 className="w-3.5 h-3.5" />
+                        </button>
+                        <button
+                          onClick={() => handleDeleteProduct(prod.id)}
+                          className="p-1.5 bg-white hover:bg-red-50 text-slate-400 hover:text-red-600 rounded-lg border border-slate-200 transition-colors shadow-2xs cursor-pointer"
+                          title="Excluir produto"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
                       </div>
                     </div>
 
-                    <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between">
+                    <div className="p-5 flex-1 flex flex-col justify-between">
                       <div>
-                        <span className="text-[11px] text-slate-500 block font-medium">Preço da Caixa</span>
-                        <span className="text-xl font-extrabold text-slate-900 font-mono tabular-nums">
-                          R$ {prod.pricePerBox.toFixed(2)}
-                        </span>
-                        <span className="text-[10px] text-emerald-700 font-mono font-bold block">
-                          Estoque total: {prod.stockBoxes ?? prod.colors?.reduce((s, c) => s + (c.stockBoxes || 0), 0) ?? 0} caixas
-                        </span>
+                        <div className="flex items-center justify-between">
+                          <span className="text-[10px] uppercase font-bold text-[#ff5500] tracking-wider">
+                            {prod.category}
+                          </span>
+                          <span className="text-[11px] font-mono font-medium text-slate-500">
+                            {prod.photos?.length || 0} fotos
+                          </span>
+                        </div>
+                        <h3 className="text-base font-bold text-slate-900 mt-0.5">{prod.name}</h3>
+
+                        {/* Display Colors Preview on Card */}
+                        {prod.colors && prod.colors.length > 0 ? (
+                          <div className="mt-2.5 space-y-1">
+                            <div className="flex items-center gap-1 text-[11px] font-bold text-slate-700">
+                              <Palette className="w-3 h-3 text-[#ff5500]" />
+                              <span>{prod.colors.length} {prod.colors.length === 1 ? 'Cor Disponível' : 'Cores Disponíveis'}:</span>
+                            </div>
+                            <div className="flex flex-wrap gap-1">
+                              {prod.colors.map((c) => {
+                                const isColorLow = (c.stockBoxes !== undefined) && c.stockBoxes <= LOW_STOCK_THRESHOLD;
+                                return (
+                                  <span
+                                    key={c.id}
+                                    className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-medium border ${
+                                      isColorLow
+                                        ? 'bg-rose-50 text-rose-900 border-rose-300 font-bold'
+                                        : 'bg-slate-100 text-slate-800 border-slate-200'
+                                    }`}
+                                  >
+                                    {c.hexColor && (
+                                      <span
+                                        className="w-2 h-2 rounded-full border border-slate-300 shrink-0"
+                                        style={{ backgroundColor: c.hexColor }}
+                                      />
+                                    )}
+                                    <span>{c.name}</span>
+                                    <span className={`font-mono text-[9px] font-bold px-1 rounded border ${
+                                      isColorLow
+                                        ? 'text-rose-700 bg-rose-100 border-rose-300'
+                                        : 'text-orange-700 bg-orange-50 border-orange-200/60'
+                                    }`}>
+                                      {c.stockBoxes !== undefined ? `${c.stockBoxes} cx${isColorLow ? ' ⚠️' : ''}` : `${c.images.length} f`}
+                                    </span>
+                                  </span>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        ) : null}
+
+                        <div className="mt-3 p-3 bg-slate-50 rounded-xl border border-slate-100 space-y-1.5 text-xs">
+                          <div className="flex items-center justify-between text-slate-700">
+                            <span className="flex items-center gap-1 font-bold text-slate-900">
+                              <Layers className="w-3.5 h-3.5 text-[#ff5500]" />
+                              {prod.pairsPerBox} pares por caixa
+                            </span>
+                            <span className="font-mono font-semibold text-slate-600">
+                              R$ {prod.pricePerPair.toFixed(2)}/par
+                            </span>
+                          </div>
+                          <div className="text-[11px] text-slate-500 font-mono">
+                            Grade: {prod.sizesDistribution.map(s => `${s.size} (${s.quantity})`).join(', ')}
+                          </div>
+                        </div>
                       </div>
-                      <button
-                        onClick={() => handleStartEdit(prod)}
-                        className="px-3 py-1.5 bg-slate-100 hover:bg-[#ff5500] text-slate-700 hover:text-white rounded-xl text-xs font-bold transition-all flex items-center gap-1 cursor-pointer"
-                      >
-                        <Edit3 className="w-3 h-3" />
-                        <span>Editar</span>
-                      </button>
+
+                      <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between">
+                        <div>
+                          <span className="text-[11px] text-slate-500 block font-medium">Preço da Caixa</span>
+                          <span className="text-xl font-extrabold text-slate-900 font-mono tabular-nums">
+                            R$ {prod.pricePerBox.toFixed(2)}
+                          </span>
+                          {prodTotalStock <= LOW_STOCK_THRESHOLD ? (
+                            <span className="text-[11px] text-rose-700 font-mono font-extrabold flex items-center gap-1 mt-0.5">
+                              <AlertTriangle className="w-3.5 h-3.5 text-rose-600 shrink-0" />
+                              <span>{prodTotalStock === 0 ? 'Esgotado (0 caixas)' : `Estoque Baixo: ${prodTotalStock} ${prodTotalStock === 1 ? 'caixa' : 'caixas'} (≤ 2)`}</span>
+                            </span>
+                          ) : (
+                            <span className="text-[10px] text-emerald-700 font-mono font-bold block mt-0.5">
+                              Estoque total: {prodTotalStock} caixas
+                            </span>
+                          )}
+                        </div>
+                        <button
+                          onClick={() => handleStartEdit(prod)}
+                          className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1 cursor-pointer ${
+                            isProdLow
+                              ? 'bg-rose-600 hover:bg-rose-700 text-white shadow-2xs'
+                              : 'bg-slate-100 hover:bg-[#ff5500] text-slate-700 hover:text-white'
+                          }`}
+                        >
+                          <Edit3 className="w-3 h-3" />
+                          <span>{isProdLow ? 'Repor Estoque' : 'Editar'}</span>
+                        </button>
+                      </div>
                     </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </div>
@@ -844,8 +1027,22 @@ export const ManufacturerDashboard: React.FC<ManufacturerDashboardProps> = ({
                   <span>Estoque Total do Modelo</span>
                   <span className="text-[10px] text-[#ff5500] font-semibold">(soma das cores)</span>
                 </label>
-                <div className="w-full bg-slate-50 border border-slate-200 px-3.5 py-2 rounded-xl text-sm font-mono font-bold text-slate-800 flex items-center justify-between">
-                  <span className="text-base text-slate-900">{totalStockBoxes} {totalStockBoxes === 1 ? 'caixa' : 'caixas'}</span>
+                <div className={`w-full border px-3.5 py-2 rounded-xl text-sm font-mono font-bold flex items-center justify-between transition-all ${
+                  totalStockBoxes <= LOW_STOCK_THRESHOLD
+                    ? 'bg-rose-50 border-rose-300 text-rose-900 ring-1 ring-rose-200'
+                    : 'bg-slate-50 border-slate-200 text-slate-800'
+                }`}>
+                  <div className="flex items-center gap-2">
+                    {totalStockBoxes <= LOW_STOCK_THRESHOLD && (
+                      <AlertTriangle className="w-4 h-4 text-rose-600 shrink-0" />
+                    )}
+                    <span className="text-base text-slate-900">{totalStockBoxes} {totalStockBoxes === 1 ? 'caixa' : 'caixas'}</span>
+                    {totalStockBoxes <= LOW_STOCK_THRESHOLD && (
+                      <span className="text-[10px] font-extrabold text-rose-600 bg-rose-100 px-1.5 py-0.5 rounded border border-rose-200 font-sans">
+                        Baixo (≤ 2 cx)
+                      </span>
+                    )}
+                  </div>
                   <span className="text-[11px] text-[#ff5500] font-sans font-medium">Defina por cor na tabela ↓</span>
                 </div>
               </div>
@@ -938,10 +1135,20 @@ export const ManufacturerDashboard: React.FC<ManufacturerDashboardProps> = ({
                               placeholder="10"
                               value={color.stockBoxes ?? ''}
                               onChange={(e) => handleUpdateColorStock(color.id, parseInt(e.target.value, 10) || 0)}
-                              className="w-20 bg-slate-50 focus:bg-white border border-slate-200 focus:border-[#ff5500] focus:ring-2 focus:ring-orange-100 px-2 py-2 rounded-xl text-xs font-mono font-bold text-center text-slate-900 transition-all shadow-2xs"
+                              className={`w-20 focus:bg-white border focus:ring-2 px-2 py-2 rounded-xl text-xs font-mono font-bold text-center transition-all shadow-2xs ${
+                                (Number(color.stockBoxes) || 0) <= LOW_STOCK_THRESHOLD
+                                  ? 'bg-rose-50 border-rose-300 text-rose-900 focus:border-rose-500 focus:ring-rose-100'
+                                  : 'bg-slate-50 border-slate-200 text-slate-900 focus:border-[#ff5500] focus:ring-orange-100'
+                              }`}
                             />
                             <span className="text-[11px] font-bold text-slate-500">cx</span>
                           </div>
+                          {(Number(color.stockBoxes) || 0) <= LOW_STOCK_THRESHOLD && (
+                            <span className="inline-flex items-center gap-0.5 mt-1 text-[10px] font-extrabold text-rose-600">
+                              <AlertTriangle className="w-2.5 h-2.5 shrink-0" />
+                              Baixo (≤ 2)
+                            </span>
+                          )}
                         </td>
 
                         {/* 5. Fotos da cor */}

@@ -17,6 +17,8 @@ import {
   ChevronRight,
   Sparkles
 } from 'lucide-react';
+import { WhatsAppIcon } from './icons/WhatsAppIcon';
+import { getProductWhatsAppUrl, SERRANA_WHATSAPP_DISPLAY } from '../services/whatsapp';
 
 interface ManufacturerProfileViewProps {
   manufacturer: Manufacturer;
@@ -538,6 +540,22 @@ export const ManufacturerProfileView: React.FC<ManufacturerProfileViewProps> = (
                     </>
                   )}
                 </button>
+
+                {/* WhatsApp Direct Product Inquiry Button */}
+                <a
+                  href={getProductWhatsAppUrl(
+                    activeProduct,
+                    activeColor?.name,
+                    currentDisplayPhotos[0] || activeProduct.photos?.[0]
+                  )}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="w-full py-3.5 px-6 bg-[#25D366] hover:bg-[#20ba59] text-white font-bold rounded-2xl text-xs sm:text-sm transition-all shadow-xs hover:shadow-md flex items-center justify-center gap-2.5 cursor-pointer group"
+                  title="Falar com o atendente da Serrana Spress no WhatsApp"
+                >
+                  <WhatsAppIcon className="w-5 h-5 group-hover:scale-110 transition-transform" />
+                  <span>Falar sobre esse Produto no WhatsApp · {SERRANA_WHATSAPP_DISPLAY}</span>
+                </a>
 
                 <button
                   type="button"

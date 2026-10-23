@@ -1,6 +1,7 @@
 import React from 'react';
 import { CurrentUser } from '../types';
 import { ShoppingBag, User, LogOut, Shield, Factory, Store } from 'lucide-react';
+import { WhatsAppIcon } from './icons/WhatsAppIcon';
 
 interface NavbarProps {
   currentUser: CurrentUser | null;
@@ -89,7 +90,19 @@ export const Navbar: React.FC<NavbarProps> = ({
         </nav>
 
         {/* Zone 3: 1 Primary Action & Cart */}
-        <div className="flex items-center gap-3 shrink-0">
+        <div className="flex items-center gap-2 sm:gap-3 shrink-0">
+          {/* WhatsApp Direct Attendant Button */}
+          <a
+            href="https://wa.me/5537991041958?text=Ol%C3%A1%20Serrana%20Spress!%20Sou%20lojista%20e%20gostaria%20de%20tirar%20d%C3%BAvidas%20sobre%20os%20cal%C3%A7ados."
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center gap-1.5 px-2.5 py-1.5 text-[#25D366] hover:bg-emerald-50 rounded-xl transition-all font-bold text-xs border border-emerald-200/80 hover:border-[#25D366] shadow-2xs"
+            title="Atendimento WhatsApp Serrana Spress: (37) 99104-1958"
+          >
+            <WhatsAppIcon className="w-4 h-4" />
+            <span className="hidden md:inline">(37) 99104-1958</span>
+          </a>
+
           {/* Cart button */}
           <button
             onClick={onOpenCart}
