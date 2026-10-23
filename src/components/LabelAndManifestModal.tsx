@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Order, OrderItem } from '../types';
 import { storageService } from '../services/storage';
 import {
@@ -10,9 +10,8 @@ import {
   Package,
   CheckCircle2,
   Sliders,
-  RotateCw,
-  Copy,
-  AlertCircle
+  Layers,
+  Box
 } from 'lucide-react';
 
 interface LabelAndManifestModalProps {
@@ -28,32 +27,29 @@ export const LabelAndManifestModal: React.FC<LabelAndManifestModalProps> = ({
 }) => {
   const [activeTab, setActiveTab] = useState<'labels' | 'manifest'>('labels');
 
-  // Total boxes in order
-  const calculatedBoxes = order.items.reduce((sum, it) => sum + it.boxQuantity, 0);
-  const totalPairs = order.items.reduce((sum, it) => sum + (it.boxQuantity * it.pairsPerBox), 0);
+  // Total closed boxes (volumes). 1 closed box (12 pairs) = 1 volume!
+  const totalBoxes = order.items.reduce((sum, it) => {
+    const qty = typeof it.boxQuantity === 'number' ? it.boxQuantity : parseInt(String(it.boxQuantity) || '0', 10);
+    return sum + (isNaN(qty) ? 0 : qty);
+  }, 0);
 
-  // Default label text from retailer
+  const totalPairs = order.items.reduce((sum, it) => {
+    const boxQty = typeof it.boxQuantity === 'number' ? it.boxQuantity : parseInt(String(it.boxQuantity) || '0', 10);
+    const pairs = typeof it.pairsPerBox === 'number' ? it.pairsPerBox : parseInt(String(it.pairsPerBox) || '12', 10);
+    return sum + ((isNaN(boxQty) ? 0 : boxQty) * (isNaN(pairs) ? 12 : pairs));
+  }, 0);
+
+  // Default label text described by retailer
   const defaultText = (
     order.boxLabelIdentification?.trim() ||
     `${order.retailerName} - ${order.deliveryAddress.city}/${order.deliveryAddress.state}`
   ).toUpperCase();
 
-  // Volume & customizer state (strictly synchronized: 1 volume = 1 etiqueta)
+  // Customizer state
   const [labelText, setLabelText] = useState(defaultText);
-  const [volumesCount, setVolumesCount] = useState<number>(calculatedBoxes > 0 ? calculatedBoxes : 1);
-  const [orientation, setOrientation] = useState<'landscape' | 'portrait'>('landscape');
-  const [numberingMode, setNumberingMode] = useState<'standard' | 'numbered'>('standard');
-
-  // Reset when order changes
-  useEffect(() => {
-    const boxes = order.items.reduce((sum, it) => sum + it.boxQuantity, 0);
-    const text = (
-      order.boxLabelIdentification?.trim() ||
-      `${order.retailerName} - ${order.deliveryAddress.city}/${order.deliveryAddress.state}`
-    ).toUpperCase();
-    setLabelText(text);
-    setVolumesCount(boxes > 0 ? boxes : 1);
-  }, [order]);
+  // Volume quantity = exact number of closed boxes (1 box = 1 volume = 1 label)
+  const [volumesCount, setVolumesCount] = useState<number>(totalBoxes > 0 ? totalBoxes : 1);
+  const [showAllCopiesOnScreen, setShowAllCopiesOnScreen] = useState(false);
 
   if (!isOpen) return null;
 
@@ -103,76 +99,75 @@ export const LabelAndManifestModal: React.FC<LabelAndManifestModalProps> = ({
     window.print();
   };
 
-  // Strictly 1 etiqueta por volume (ex: 1 volume = 1 etiqueta; 11 volumes = 11 etiquetas)
-  const finalVolumeCount = Math.max(1, volumesCount || 1);
-  const printArray = Array.from({ length: finalVolumeCount }, (_, i) => i + 1);
+  // Generate exact copies array matching volumes count (1 label per volume / closed box)
+  const totalLabelsToPrint = Math.max(1, volumesCount || 1);
+  const copiesArray = Array.from({ length: totalLabelsToPrint }, (_, i) => i + 1);
 
   // Format retailer label text lines
   const textLines = labelText.split('\n').filter(Boolean);
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-slate-950/75 backdrop-blur-xs">
-      {/* BULLETPROOF PRINT CSS STYLES FOR EXACT 1-PAGE PER VOLUME (ZEBRA ZD220 / ELGIN / ARGOX) */}
+      {/* PRINT CSS STYLES FOR STRICT HORIZONTAL 150x100MM THERMAL & A4 SHEETS */}
       <style>{`
+        @media screen {
+          .print-only-copy {
+            display: none !important;
+          }
+        }
+
         @media print {
           @page {
-            size: ${activeTab === 'labels' ? (orientation === 'landscape' ? '150mm 100mm landscape' : '100mm 150mm portrait') : '210mm 297mm portrait'};
-            margin: 0 !important;
+            size: ${activeTab === 'labels' ? '150mm 100mm landscape' : '210mm 297mm portrait'};
+            margin: 0;
           }
-          html, body {
-            margin: 0 !important;
-            padding: 0 !important;
-            background: #ffffff !important;
-            -webkit-print-color-adjust: exact !important;
-            print-color-adjust: exact !important;
-          }
+
           body * {
-            visibility: hidden !important;
+            visibility: hidden;
           }
+
           #print-root, #print-root * {
-            visibility: visible !important;
+            visibility: visible;
           }
+
           #print-root {
-            position: absolute !important;
-            left: 0 !important;
-            top: 0 !important;
-            width: 100% !important;
-            margin: 0 !important;
+            position: absolute;
+            left: 0;
+            top: 0;
+            width: 100%;
+            background: transparent !important;
             padding: 0 !important;
-            display: block !important;
+            margin: 0 !important;
           }
+
           .no-print {
             display: none !important;
           }
 
-          /* Thermal Label Page (Clean, 1 page per label, no flex overflow) */
-          .thermal-box-print-page {
-            width: ${orientation === 'landscape' ? '148mm' : '98mm'} !important;
-            height: ${orientation === 'landscape' ? '98mm' : '148mm'} !important;
-            max-width: ${orientation === 'landscape' ? '148mm' : '98mm'} !important;
-            max-height: ${orientation === 'landscape' ? '98mm' : '148mm'} !important;
+          .print-only-copy {
+            display: flex !important;
+          }
+
+          /* Thermal Label Mode - Strictly Horizontal (150mm x 100mm) */
+          .thermal-box-label {
+            width: 148mm !important;
+            height: 98mm !important;
+            max-height: 98mm !important;
             page-break-after: always !important;
             break-after: page !important;
             page-break-inside: avoid !important;
             break-inside: avoid !important;
-            box-sizing: border-box !important;
             margin: 0 auto !important;
-            padding: 8mm 6mm !important;
             display: flex !important;
             flex-direction: column !important;
             align-items: center !important;
             justify-content: center !important;
             text-align: center !important;
+            box-sizing: border-box !important;
             background: #ffffff !important;
             color: #000000 !important;
             border: none !important;
-            box-shadow: none !important;
-          }
-
-          /* Prevent empty trailing page on Zebra printers */
-          .thermal-box-print-page:last-child {
-            page-break-after: avoid !important;
-            break-after: avoid !important;
+            padding: 8mm 6mm !important;
           }
 
           /* A4 Manifest Sheet Mode */
@@ -183,12 +178,8 @@ export const LabelAndManifestModal: React.FC<LabelAndManifestModalProps> = ({
             break-after: page !important;
             margin: 0 auto !important;
             box-sizing: border-box !important;
-            background: #ffffff !important;
-            color: #000000 !important;
-          }
-          .a4-page:last-child {
-            page-break-after: avoid !important;
-            break-after: avoid !important;
+            background: #fff !important;
+            color: #000 !important;
           }
         }
       `}</style>
@@ -206,13 +197,10 @@ export const LabelAndManifestModal: React.FC<LabelAndManifestModalProps> = ({
               </span>
             </div>
             <h2 className="text-lg sm:text-xl font-extrabold text-slate-900 mt-1">
-              {activeTab === 'labels' ? 'Etiquetas das Caixas Fechadas' : 'Romaneio de Expedição A4'}
+              {activeTab === 'labels' ? 'Etiquetas das Caixas Fechadas (Horizontal 150×100 mm)' : 'Romaneio de Expedição A4'}
             </h2>
             <p className="text-xs text-slate-600 mt-0.5">
-              Identificação: <strong className="text-slate-900 font-mono">{labelText}</strong> ·{' '}
-              <strong className="text-[#ff5500] font-mono">
-                {finalVolumeCount} {finalVolumeCount === 1 ? 'Volume (1 Etiqueta)' : `Volumes (${finalVolumeCount} Etiquetas)`}
-              </strong>
+              Identificação: <strong className="text-slate-900 font-mono">{labelText}</strong> · Total: <strong>{totalBoxes} caixas fechadas</strong> ({totalBoxes} volumes · {totalPairs} pares)
             </p>
           </div>
 
@@ -222,9 +210,7 @@ export const LabelAndManifestModal: React.FC<LabelAndManifestModalProps> = ({
               className="px-4 py-2.5 bg-[#ff5500] hover:bg-[#ea580c] text-white font-bold rounded-xl text-xs transition-all shadow-xs flex items-center gap-2 cursor-pointer"
             >
               <Printer className="w-4 h-4" />
-              <span>
-                Imprimir {activeTab === 'labels' ? `${finalVolumeCount} ${finalVolumeCount === 1 ? 'Etiqueta (1 Folha)' : 'Etiquetas'}` : 'Romaneio A4'}
-              </span>
+              <span>Imprimir {activeTab === 'labels' ? `${totalLabelsToPrint} ${totalLabelsToPrint === 1 ? 'Etiqueta' : 'Etiquetas'}` : 'Romaneio A4'}</span>
             </button>
             <button
               onClick={onClose}
@@ -246,7 +232,7 @@ export const LabelAndManifestModal: React.FC<LabelAndManifestModalProps> = ({
             }`}
           >
             <Tag className="w-4 h-4" />
-            <span>Etiquetas para as Caixas ({finalVolumeCount} {finalVolumeCount === 1 ? 'Volume' : 'Volumes'})</span>
+            <span>Etiquetas para as Caixas ({totalLabelsToPrint} Etiquetas = {totalLabelsToPrint} Volumes)</span>
           </button>
           <button
             onClick={() => setActiveTab('manifest')}
@@ -264,19 +250,24 @@ export const LabelAndManifestModal: React.FC<LabelAndManifestModalProps> = ({
         {/* Printable Content Area */}
         <div className="flex-1 overflow-y-auto p-4 sm:p-6 bg-slate-100">
           <div id="print-root">
-            {/* TAB 1: THERMAL BOX LABELS (1 VOLUME = EXACTLY 1 ETIQUETA) */}
+            {/* TAB 1: THERMAL BOX LABELS (STRICTLY HORIZONTAL 150x100mm, 1 LABEL PER CLOSED BOX/VOLUME) */}
             {activeTab === 'labels' && (
               <div className="space-y-6">
-                {/* Customizer Panel (Screen only, completely hidden in print) */}
+                {/* Customizer Panel (Only visible on screen, hidden in print) */}
                 <div className="bg-white rounded-2xl p-4 sm:p-5 border border-slate-200 shadow-xs space-y-4 no-print">
-                  <div className="flex items-center justify-between border-b border-slate-100 pb-2">
+                  <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 pb-2">
                     <span className="text-xs font-bold text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
                       <Sliders className="w-4 h-4 text-[#ff5500]" />
-                      <span>Configuração da Etiqueta Térmica</span>
+                      <span>Configuração da Etiqueta da Caixa</span>
                     </span>
-                    <span className="text-[11px] text-emerald-800 font-bold bg-emerald-50 px-2.5 py-0.5 rounded-full border border-emerald-200">
-                      {finalVolumeCount === 1 ? '1 Volume = 1 Etiqueta Exata' : `${finalVolumeCount} Volumes = ${finalVolumeCount} Etiquetas`}
-                    </span>
+                    <div className="flex items-center gap-2">
+                      <span className="text-[11px] text-blue-700 font-bold bg-blue-50 px-2.5 py-0.5 rounded-full border border-blue-200">
+                        Formato Fixo: Horizontal (150×100 mm)
+                      </span>
+                      <span className="text-[11px] text-emerald-700 font-bold bg-emerald-50 px-2.5 py-0.5 rounded-full border border-emerald-200">
+                        1 Caixa Fechada = 1 Volume = 1 Etiqueta
+                      </span>
+                    </div>
                   </div>
 
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
@@ -293,255 +284,122 @@ export const LabelAndManifestModal: React.FC<LabelAndManifestModalProps> = ({
                         className="w-full px-3.5 py-2 rounded-xl border border-slate-300 text-xs font-bold font-mono text-slate-900 bg-slate-50 uppercase focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#ff5500]"
                       />
                       <span className="text-[10px] text-slate-500 mt-0.5 block">
-                        Texto impresso em destaque central na caixa. Pressione Enter para quebrar linhas.
+                        Texto impresso em letras garrafais pretas no centro da caixa. Pressione Enter para quebrar linhas.
                       </span>
                     </div>
 
-                    {/* Quantity of volumes */}
+                    {/* Quantity of volumes (= quantity of labels) */}
                     <div>
                       <label className="block text-xs font-bold text-slate-700 mb-1">
-                        Quantidade de Volumes *
+                        Quantidade de Volumes (Caixas Fechadas)
                       </label>
                       <input
                         type="number"
                         min={1}
                         value={volumesCount}
-                        onChange={(e) => setVolumesCount(Math.max(1, parseInt(e.target.value) || 1))}
-                        className="w-full px-3.5 py-2 rounded-xl border border-slate-300 text-xs font-bold font-mono text-slate-900 bg-white focus:outline-none focus:ring-2 focus:ring-[#ff5500]"
+                        onChange={(e) => {
+                          const val = Math.max(1, parseInt(e.target.value) || 1);
+                          setVolumesCount(val);
+                        }}
+                        className="w-full px-3.5 py-2 rounded-xl border border-slate-300 text-sm font-black font-mono text-slate-900 bg-white focus:outline-none focus:ring-2 focus:ring-[#ff5500]"
                       />
-                      <div className="flex items-center gap-1.5 mt-1.5">
-                        <button
-                          type="button"
-                          onClick={() => setVolumesCount(1)}
-                          className={`px-2 py-0.5 text-[10px] font-bold rounded cursor-pointer ${
-                            finalVolumeCount === 1
-                              ? 'bg-[#ff5500] text-white'
-                              : 'bg-slate-100 hover:bg-slate-200 text-slate-700'
-                          }`}
-                        >
-                          1 Volume
-                        </button>
-                        {calculatedBoxes > 1 && (
-                          <button
-                            type="button"
-                            onClick={() => setVolumesCount(calculatedBoxes)}
-                            className={`px-2 py-0.5 text-[10px] font-bold rounded cursor-pointer ${
-                              finalVolumeCount === calculatedBoxes
-                                ? 'bg-[#ff5500] text-white'
-                                : 'bg-slate-100 hover:bg-slate-200 text-slate-700'
-                            }`}
-                          >
-                            {calculatedBoxes} Volumes
-                          </button>
-                        )}
-                      </div>
-                      <span className="text-[10px] text-slate-500 mt-1 block">
-                        {finalVolumeCount === 1
-                          ? 'Será impressa exatamente 1 folha/etiqueta.'
-                          : `Serão impressas ${finalVolumeCount} etiquetas (1 por volume).`}
+                      <span className="text-[10px] text-slate-600 mt-1 block">
+                        Imprime no rodapé: <strong>"{volumesCount} {volumesCount === 1 ? 'VOLUME' : 'VOLUMES'}"</strong>
+                      </span>
+                      <span className="text-[10px] font-bold text-[#ff5500] mt-0.5 block">
+                        Total a imprimir: {totalLabelsToPrint} {totalLabelsToPrint === 1 ? 'etiqueta' : 'etiquetas'}
                       </span>
                     </div>
                   </div>
 
-                  <div className="flex flex-wrap items-center justify-between gap-3 pt-2 border-t border-slate-100 text-xs">
+                  {/* Clarification banner */}
+                  <div className="p-3 bg-amber-50/70 rounded-xl border border-amber-200 text-xs text-amber-900 flex items-center justify-between gap-3">
                     <div className="flex items-center gap-2">
-                      <span className="text-slate-600 font-medium">Orientação da Impressora:</span>
-                      <button
-                        type="button"
-                        onClick={() => setOrientation('landscape')}
-                        className={`px-3 py-1.5 rounded-lg font-bold transition-colors cursor-pointer ${
-                          orientation === 'landscape'
-                            ? 'bg-black text-white'
-                            : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
-                        }`}
-                      >
-                        Horizontal (150×100 mm - Padrão da Foto)
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setOrientation('portrait')}
-                        className={`px-3 py-1.5 rounded-lg font-bold transition-colors cursor-pointer ${
-                          orientation === 'portrait'
-                            ? 'bg-black text-white'
-                            : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
-                        }`}
-                      >
-                        Vertical (100×150 mm)
-                      </button>
+                      <Box className="w-4 h-4 text-[#ff5500] shrink-0" />
+                      <span>
+                        Regra da expedição: <strong>A etiqueta é para 1 caixa com 12 pares (1 volume).</strong> Não é impressa 1 etiqueta por par individual nem por número da grade.
+                      </span>
                     </div>
 
-                    <div className="flex items-center gap-2">
-                      <span className="text-slate-600 font-medium">Formato do Volume:</span>
+                    {totalLabelsToPrint > 1 && (
                       <button
                         type="button"
-                        onClick={() => setNumberingMode('standard')}
-                        className={`px-3 py-1.5 rounded-lg font-bold transition-colors cursor-pointer ${
-                          numberingMode === 'standard'
-                            ? 'bg-[#ff5500] text-white'
-                            : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
-                        }`}
+                        onClick={() => setShowAllCopiesOnScreen(!showAllCopiesOnScreen)}
+                        className="text-[11px] font-bold text-amber-800 hover:text-black underline shrink-0 cursor-pointer"
                       >
-                        Apenas "{finalVolumeCount} {finalVolumeCount === 1 ? 'VOLUME' : 'VOLUMES'}" (Foto)
+                        {showAllCopiesOnScreen ? 'Ocultar cópias repetidas na tela' : `Ver todas as ${totalLabelsToPrint} etiquetas na tela`}
                       </button>
-                      {finalVolumeCount > 1 && (
-                        <button
-                          type="button"
-                          onClick={() => setNumberingMode('numbered')}
-                          className={`px-3 py-1.5 rounded-lg font-bold transition-colors cursor-pointer ${
-                            numberingMode === 'numbered'
-                              ? 'bg-[#ff5500] text-white'
-                              : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
-                          }`}
-                        >
-                          Numerado (VOL 01/{finalVolumeCount})
-                        </button>
-                      )}
-                    </div>
+                    )}
                   </div>
                 </div>
 
-                {/* ON-SCREEN REALISTIC STICKER PREVIEW (1 single preview card on screen) */}
-                <div className="flex flex-col items-center no-print">
-                  <div className="text-center text-xs text-slate-500 mb-2">
-                    Prévia da Etiqueta Térmica adesiva (exatamente como será impressa para colar na caixa):
+                {/* VISUAL PREVIEW OF THE EXACT HORIZONTAL THERMAL LABEL (150x100mm) */}
+                <div className="flex flex-col items-center">
+                  <div className="text-center text-xs text-slate-500 mb-3 no-print">
+                    Prévia da Etiqueta Térmica adesiva Horizontal (exatamente como sairá na impressora para colar na caixa):
                   </div>
 
-                  <div
-                    className="bg-white text-black border border-slate-300 rounded-xl shadow-md font-sans flex flex-col items-center justify-center text-center select-none"
-                    style={{
-                      width: orientation === 'landscape' ? '460px' : '320px',
-                      height: orientation === 'landscape' ? '300px' : '460px',
-                      padding: '28px 20px',
-                    }}
-                  >
-                    <div className="flex-1 flex flex-col justify-center items-center w-full">
-                      <div className="space-y-1 w-full max-w-[92%]">
-                        {textLines.length > 0 ? (
-                          textLines.map((line, lIdx) => (
-                            <div
-                              key={lIdx}
-                              className="text-2xl sm:text-3xl font-black text-black uppercase tracking-wide leading-tight break-words text-center"
-                            >
-                              {line}
-                            </div>
-                          ))
-                        ) : (
-                          <div className="text-2xl font-black text-black uppercase tracking-wide text-center">
-                            {labelText}
-                          </div>
-                        )}
-                      </div>
-                    </div>
-
-                    <div className="w-full pt-4 pb-2 text-center">
-                      <div className="text-2xl sm:text-3xl font-black text-black uppercase tracking-wider">
-                        {finalVolumeCount} {finalVolumeCount === 1 ? 'VOLUME' : 'VOLUMES'}
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="text-xs text-slate-600 mt-3 flex items-center gap-1.5 font-medium">
-                    <CheckCircle2 className="w-4 h-4 text-emerald-600" />
-                    <span>
-                      Ao clicar em Imprimir, sairá <strong>exatamente {finalVolumeCount} {finalVolumeCount === 1 ? 'etiqueta (1 folha)' : 'etiquetas'}</strong> na sua impressora Zebra.
-                    </span>
-                  </div>
-                </div>
-
-                {/* STRICT PRINT ELEMENT CONTAINER (RENDERED CLEANLY FOR PRINT ONLY) */}
-                <div className="print-only-container">
-                  {printArray.map((copyNum, idx) => (
-                    <div
-                      key={idx}
-                      className="thermal-box-print-page"
-                    >
-                      {/* RETAILER DESCRIPTION (CENTRAL & HUGE) */}
-                      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', width: '100%' }}>
-                        <div style={{ width: '92%', textAlign: 'center' }}>
-                          {textLines.length > 0 ? (
-                            textLines.map((line, lIdx) => (
-                              <div
-                                key={lIdx}
-                                style={{
-                                  fontSize: '32pt',
-                                  fontWeight: 900,
-                                  color: '#000000',
-                                  textTransform: 'uppercase',
-                                  letterSpacing: '0.04em',
-                                  lineHeight: '1.15',
-                                  wordBreak: 'break-word',
-                                  textAlign: 'center',
-                                  fontFamily: 'Arial, Helvetica, sans-serif',
-                                }}
-                              >
-                                {line}
+                  {/* Render copies for print & screen */}
+                  <div className="space-y-6 flex flex-col items-center w-full">
+                    {copiesArray.map((copyNum, idx) => (
+                      <div
+                        key={idx}
+                        className={`thermal-box-label bg-white text-black border border-slate-300 rounded-xl shadow-md font-sans flex flex-col items-center justify-center text-center select-none ${
+                          idx > 0 && !showAllCopiesOnScreen ? 'print-only-copy' : ''
+                        }`}
+                        style={{
+                          width: '480px',
+                          height: '320px',
+                          maxWidth: '100%',
+                          padding: '36px 24px',
+                        }}
+                      >
+                        {/* RETAILER DESCRIPTION (CENTRAL & HUGE) */}
+                        <div className="flex-1 flex flex-col justify-center items-center w-full">
+                          <div className="space-y-1.5 w-full max-w-[94%]">
+                            {textLines.length > 0 ? (
+                              textLines.map((line, lIdx) => (
+                                <div
+                                  key={lIdx}
+                                  className="text-3xl sm:text-4xl md:text-5xl font-black text-black uppercase tracking-wide leading-tight break-words text-center"
+                                  style={{
+                                    fontFamily: 'system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif',
+                                  }}
+                                >
+                                  {line}
+                                </div>
+                              ))
+                            ) : (
+                              <div className="text-4xl font-black text-black uppercase tracking-wide text-center">
+                                {labelText}
                               </div>
-                            ))
-                          ) : (
-                            <div
-                              style={{
-                                fontSize: '32pt',
-                                fontWeight: 900,
-                                color: '#000000',
-                                textTransform: 'uppercase',
-                                letterSpacing: '0.04em',
-                                textAlign: 'center',
-                                fontFamily: 'Arial, Helvetica, sans-serif',
-                              }}
-                            >
-                              {labelText}
-                            </div>
-                          )}
-                        </div>
-                      </div>
-
-                      {/* QUANTITY OF VOLUMES (BOTTOM & BIG) */}
-                      <div style={{ width: '100%', paddingTop: '16px', paddingBottom: '8px', textAlign: 'center' }}>
-                        {numberingMode === 'numbered' && finalVolumeCount > 1 ? (
-                          <div>
-                            <div
-                              style={{
-                                fontSize: '20pt',
-                                fontWeight: 900,
-                                color: '#000000',
-                                textTransform: 'uppercase',
-                                letterSpacing: '0.05em',
-                                fontFamily: 'Arial, Helvetica, sans-serif',
-                              }}
-                            >
-                              VOLUME {String(copyNum).padStart(2, '0')} / {String(finalVolumeCount).padStart(2, '0')}
-                            </div>
-                            <div
-                              style={{
-                                fontSize: '14pt',
-                                fontWeight: 700,
-                                color: '#333333',
-                                textTransform: 'uppercase',
-                                letterSpacing: '0.08em',
-                                fontFamily: 'Arial, Helvetica, sans-serif',
-                              }}
-                            >
-                              {finalVolumeCount} {finalVolumeCount === 1 ? 'VOLUME' : 'VOLUMES'}
-                            </div>
+                            )}
                           </div>
-                        ) : (
+                        </div>
+
+                        {/* QUANTITY OF VOLUMES (BOTTOM & BIG) */}
+                        <div className="w-full pt-4 pb-2 text-center">
                           <div
+                            className="text-3xl sm:text-4xl md:text-5xl font-black text-black uppercase tracking-wider"
                             style={{
-                              fontSize: '26pt',
-                              fontWeight: 900,
-                              color: '#000000',
-                              textTransform: 'uppercase',
-                              letterSpacing: '0.06em',
-                              textAlign: 'center',
-                              fontFamily: 'Arial, Helvetica, sans-serif',
+                              fontFamily: 'system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif',
                             }}
                           >
-                            {finalVolumeCount} {finalVolumeCount === 1 ? 'VOLUME' : 'VOLUMES'}
+                            {volumesCount} {volumesCount === 1 ? 'VOLUME' : 'VOLUMES'}
                           </div>
-                        )}
+                        </div>
                       </div>
+                    ))}
+                  </div>
+
+                  {totalLabelsToPrint > 1 && (
+                    <div className="text-xs text-slate-600 mt-3 no-print flex items-center gap-1.5">
+                      <Layers className="w-4 h-4 text-[#ff5500]" />
+                      <span>
+                        Serão impressas exatamente <strong>{totalLabelsToPrint} etiquetas horizontais</strong> (1 etiqueta para cada uma das {totalLabelsToPrint} caixas fechadas).
+                      </span>
                     </div>
-                  ))}
+                  )}
                 </div>
               </div>
             )}
@@ -614,7 +472,7 @@ export const LabelAndManifestModal: React.FC<LabelAndManifestModalProps> = ({
                 <div className="bg-black text-white p-2.5 rounded flex items-center justify-between text-xs font-bold uppercase mb-5">
                   <span>RESUMO DE VOLUMES DO PEDIDO:</span>
                   <span className="font-mono text-sm font-black">
-                    {finalVolumeCount} {finalVolumeCount === 1 ? 'VOLUME / CAIXA FECHADA' : 'VOLUMES / CAIXAS FECHADAS'} ({totalPairs} PARES NO TOTAL)
+                    {volumesCount} CAIXAS FECHADAS ({totalPairs} PARES NO TOTAL)
                   </span>
                   <span>{suppliersList.length} {suppliersList.length === 1 ? 'FORNECEDOR' : 'FORNECEDORES DIFERENTES'}</span>
                 </div>
@@ -702,11 +560,11 @@ export const LabelAndManifestModal: React.FC<LabelAndManifestModalProps> = ({
                     </label>
                     <label className="flex items-center gap-2">
                       <span className="w-4 h-4 border-2 border-black rounded shrink-0"></span>
-                      <span>Etiquetas coladas com "{labelText}" e "{finalVolumeCount} {finalVolumeCount === 1 ? 'VOLUME' : 'VOLUMES'}"</span>
+                      <span>Etiquetas horizontais coladas com "{labelText}" e "{volumesCount} VOLUMES"</span>
                     </label>
                     <label className="flex items-center gap-2">
                       <span className="w-4 h-4 border-2 border-black rounded shrink-0"></span>
-                      <span>Total de {finalVolumeCount} {finalVolumeCount === 1 ? 'volume agrupado' : 'volumes agrupados'} no palete/lote</span>
+                      <span>Total de {volumesCount} caixas fechadas agrupadas no palete/lote</span>
                     </label>
                     <label className="flex items-center gap-2">
                       <span className="w-4 h-4 border-2 border-black rounded shrink-0"></span>
@@ -741,11 +599,7 @@ export const LabelAndManifestModal: React.FC<LabelAndManifestModalProps> = ({
         <div className="p-4 border-t border-slate-200 bg-white flex justify-between items-center no-print">
           <div className="text-xs text-slate-500 flex items-center gap-2">
             <CheckCircle2 className="w-4 h-4 text-emerald-600" />
-            <span>
-              {finalVolumeCount === 1
-                ? 'Configurado para imprimir exatamente 1 etiqueta (1 folha).'
-                : `Configurado para imprimir ${finalVolumeCount} etiquetas (${finalVolumeCount} folhas).`}
-            </span>
+            <span>Formato exclusivamente horizontal (150×100 mm): 1 caixa fechada (12 pares) = 1 volume = 1 etiqueta impressa.</span>
           </div>
 
           <div className="flex items-center gap-2">
@@ -760,7 +614,7 @@ export const LabelAndManifestModal: React.FC<LabelAndManifestModalProps> = ({
               className="px-5 py-2 bg-[#ff5500] hover:bg-[#ea580c] text-white font-bold rounded-xl text-xs transition-all shadow-xs flex items-center gap-2 cursor-pointer"
             >
               <Printer className="w-4 h-4" />
-              <span>Imprimir Agora ({finalVolumeCount} {finalVolumeCount === 1 ? 'Etiqueta' : 'Etiquetas'})</span>
+              <span>Imprimir {totalLabelsToPrint} {totalLabelsToPrint === 1 ? 'Etiqueta' : 'Etiquetas'} Agora</span>
             </button>
           </div>
         </div>
